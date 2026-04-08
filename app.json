@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Akkoç Lojistik",
+    "slug": "lojistik-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.akkoc.lojistik.tahta",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "com.akkoc.lojistik.tahta",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6b548d62-9a0c-4c0c-a36e-e03739835fed"
+      }
+    },
+    "owner": "kakkoc"
+  }
+}
