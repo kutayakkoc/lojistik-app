@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.akkoc.lojistik.tahta",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.akkoc.lojistik.tahta",
@@ -34,6 +37,7 @@
     ],
     "extra": {
       "eas": {
+        "projectId": "6b548d62-9a0c-4c0c-a36e-e03739835fed"
       }
     },
   }
