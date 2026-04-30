@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 
 export default function LegalDetailScreen({ route, navigation }: any) {
   const { docId, title } = route.params;
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const getLegalText = () => {
@@ -57,7 +57,7 @@ export default function LegalDetailScreen({ route, navigation }: any) {
       {/* Immersive Mission Control Header */}
       <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>

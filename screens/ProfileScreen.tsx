@@ -22,7 +22,7 @@ import { StatusBar } from 'expo-status-bar';
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const { theme, toggleTheme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
         if (!vehicleError) setVehicle(vehicleData);
       }
     } catch (error: any) {
-      console.log('fetchProfile Error:', error.message);
+      // fetchProfile Error
     } finally {
       setLoading(false);
     }
@@ -89,6 +89,20 @@ export default function ProfileScreen() {
     );
   };
 
+  const getCompletion = () => {
+    const isDriver = profile?.role === 'DRIVER';
+    const items = [
+      { label: 'Ad Soyad', done: !!profile?.full_name, screen: 'EditProfile' },
+      { label: 'Telefon', done: !!profile?.phone, screen: 'EditProfile' },
+      ...(isDriver ? [
+        { label: 'Araç Plakası', done: !!vehicle?.plate_number, screen: 'EditVehicle' },
+        { label: 'Araç Tipi', done: !!vehicle?.vehicle_type, screen: 'EditVehicle' },
+      ] : []),
+    ];
+    const pct = Math.round((items.filter(i => i.done).length / items.length) * 100);
+    return { items, pct };
+  };
+
   if (loading && !profile) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.background }]}>
@@ -105,7 +119,7 @@ export default function ProfileScreen() {
       {/* Immersive Mission Control Header */}
       <View style={[styles.headerHero, { paddingTop: insets.top + 20 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>
@@ -130,12 +144,44 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 20 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
+          {/* Profil Tamamlanma */}
+          {profile && (() => {
+            const { items, pct } = getCompletion();
+            const color = pct === 100 ? '#22C55E' : pct >= 50 ? '#F59E0B' : '#EF4444';
+            const missing = items.filter(i => !i.done);
+            return (
+              <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 20 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={[styles.specTitle, { color: theme.text }]}>PROFİL TAMAMLANMA</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color }}>{pct}%</Text>
+                </View>
+                <View style={{ height: 8, borderRadius: 4, backgroundColor: theme.border, overflow: 'hidden' }}>
+                  <View style={{ width: `${pct}%`, height: '100%', borderRadius: 4, backgroundColor: color }} />
+                </View>
+                {missing.length > 0 && (
+                  <View style={{ marginTop: 12, gap: 6 }}>
+                    {missing.map(item => (
+                      <TouchableOpacity
+                        key={item.label}
+                        onPress={() => navigation.navigate(item.screen)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                      >
+                        <Ionicons name="alert-circle-outline" size={16} color="#F59E0B" />
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: theme.textLight }}>{item.label} eksik —</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: theme.accent }}>Ekle</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })()}
           {/* Account Spec Card */}
           <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
              <View style={styles.specHeader}>
@@ -151,7 +197,7 @@ export default function ProfileScreen() {
              </View>
 
              <TouchableOpacity 
-               style={[styles.editActionBtn, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}
+               style={[styles.editActionBtn, { backgroundColor: '#F1F5F9' }]}
                onPress={() => navigation.navigate('EditProfile')}
              >
                 <Ionicons name="create-outline" size={18} color={theme.accent} />
@@ -185,7 +231,7 @@ export default function ProfileScreen() {
                )}
 
                <TouchableOpacity 
-                 style={[styles.editActionBtn, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}
+                 style={[styles.editActionBtn, { backgroundColor: '#F1F5F9' }]}
                  onPress={() => navigation.navigate('EditVehicle')}
                >
                   <Ionicons name={vehicle ? "settings-outline" : "add-circle-outline"} size={18} color={theme.accent} />
@@ -202,19 +248,6 @@ export default function ProfileScreen() {
              </View>
 
              <View style={styles.consoleList}>
-                <View style={styles.consoleItem}>
-                   <View style={styles.consoleItemLeft}>
-                      <Ionicons name="moon-outline" size={20} color={theme.textLight} />
-                      <Text style={[styles.consoleText, { color: theme.text }]}>Karanlık Mod</Text>
-                   </View>
-                   <Switch
-                     value={isDarkMode}
-                     onValueChange={toggleTheme}
-                     trackColor={{ false: '#334155', true: theme.accent }}
-                     thumbColor="#fff"
-                   />
-                </View>
-
                 <TouchableOpacity 
                    style={styles.consoleItem}
                    onPress={() => navigation.navigate('Profile', { screen: 'Notifications' })}
@@ -269,7 +302,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 15, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 },
-  headerHero: { paddingHorizontal: 20, paddingBottom: 60, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, ...Shadows.medium },
+  headerHero: { paddingHorizontal: 20, paddingBottom: 30, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, ...Shadows.medium },
   headerContent: { alignItems: 'center' },
   identityBadge: { alignItems: 'center' },
   avatarGlow: { padding: 8, borderRadius: 60 },
@@ -280,7 +313,7 @@ const styles = StyleSheet.create({
   roleTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, marginTop: 8 },
   pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E', marginRight: 6 },
   roleTagText: { color: 'rgba(255,255,255,0.8)', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
-  scrollView: { flex: 1, marginTop: -30 },
+  scrollView: { flex: 1, marginTop: 0 },
   content: { padding: 20 },
   specCard: { padding: 20, borderRadius: Radius.xl, marginBottom: 20, borderWidth: 1, ...Shadows.medium },
   specHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },

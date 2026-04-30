@@ -13,21 +13,24 @@ import * as Haptics from 'expo-haptics';
 const { width } = Dimensions.get('window');
 
 export default function DriverApplicationsScreen() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [applications, setApplications] = useState<any[]>([]);
+  const [myAvailabilities, setMyAvailabilities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
-  const [activeFilter, setActiveFilter] = useState<'PENDING' | 'ASSIGNED' | 'COMPLETED' | 'REJECTED'>('PENDING');
+  const [activeFilter, setActiveFilter] = useState<'PENDING' | 'ASSIGNED' | 'COMPLETED' | 'REJECTED' | 'MY_VEHICLES'>('PENDING');
 
   useEffect(() => {
     fetchMyApplications();
+    fetchMyAvailabilities();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       fetchMyApplications();
+      fetchMyAvailabilities();
     }, [])
   );
 
@@ -68,10 +71,35 @@ export default function DriverApplicationsScreen() {
       if (error) throw error;
       setApplications(data || []);
     } catch (error: any) {
-      console.log('fetchMyApplications Catch:', error.message);
+      // fetchMyApplications Catch
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMyAvailabilities = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const { data } = await supabase
+      .from('driver_availabilities')
+      .select('id, origin, destination, available_date, vehicle_type, notes')
+      .eq('driver_id', session.user.id)
+      .order('available_date', { ascending: true });
+    setMyAvailabilities(data || []);
+  };
+
+  const handleDeleteAvailability = async (id: string) => {
+    Alert.alert('İlanı Sil', 'Bu boş araç ilanını silmek istediğinizden emin misiniz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.from('driver_availabilities').delete().eq('id', id);
+          fetchMyAvailabilities();
+        },
+      },
+    ]);
   };
 
   const handleWhatsAppContact = (job: any) => {
@@ -111,6 +139,55 @@ export default function DriverApplicationsScreen() {
     } catch (e) {
       return dateStr;
     }
+  };
+
+  const renderAvailabilityCard = ({ item }: { item: any }) => {
+    const today = new Date().toISOString().split('T')[0];
+    const isExpired = item.available_date < today;
+    return (
+      <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }, isExpired && { opacity: 0.5 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <View style={[styles.statusBadge, { backgroundColor: isExpired ? 'rgba(148,163,184,0.1)' : 'rgba(59,130,246,0.1)', borderWidth: 1, borderColor: (isExpired ? '#94A3B8' : '#3B82F6') + '40' }]}>
+            <View style={[styles.pulseDot, { backgroundColor: isExpired ? '#94A3B8' : '#3B82F6' }]} />
+            <Text style={[styles.statusBadgeText, { color: isExpired ? '#94A3B8' : '#3B82F6' }]}>{isExpired ? 'SÜRESİ DOLDU' : 'AKTİF İLAN'}</Text>
+          </View>
+          <TouchableOpacity onPress={() => handleDeleteAvailability(item.id)} style={{ padding: 8, borderRadius: 8, backgroundColor: '#FEE2E2' }}>
+            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.telemetryRouteBridge}>
+          <View style={styles.bridgePoint}>
+            <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 4 }]}>NEREDEN</Text>
+            <Text style={[styles.telemetryCity, { color: theme.text }]} numberOfLines={1}>{item.origin}</Text>
+          </View>
+          <View style={styles.telemetryRoutePath}>
+            <View style={[styles.routePathDash, { borderColor: theme.border }]} />
+            <FontAwesome5 name="truck" size={14} color={isExpired ? theme.textLight : '#3B82F6'} style={{ marginHorizontal: 8 }} />
+            <View style={[styles.routePathDash, { borderColor: theme.border }]} />
+          </View>
+          <View style={[styles.bridgePoint, { alignItems: 'flex-end' }]}>
+            <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 4 }]}>NEREYE</Text>
+            <Text style={[styles.telemetryCity, { color: theme.text, textAlign: 'right' }]} numberOfLines={1}>{item.destination}</Text>
+          </View>
+        </View>
+
+        <View style={styles.telemetryGrid}>
+          <View style={styles.telemetryBox}>
+            <Text style={[styles.telemetryLabel, { color: theme.textLight }]}>MÜSAİT TARİH</Text>
+            <Text style={[styles.telemetryValue, { color: isExpired ? theme.textLight : theme.text }]}>{formatMissionDate(item.available_date)}</Text>
+          </View>
+          <View style={[styles.telemetryBox, { borderLeftWidth: 1, borderLeftColor: theme.border, paddingLeft: 15 }]}>
+            <Text style={[styles.telemetryLabel, { color: theme.textLight }]}>ARAÇ TİPİ</Text>
+            <Text style={[styles.telemetryValue, { color: theme.text }]}>{item.vehicle_type}</Text>
+          </View>
+        </View>
+
+        {item.notes ? (
+          <Text style={{ fontSize: 12, color: theme.textLight, fontStyle: 'italic' }}>Not: {item.notes}</Text>
+        ) : null}
+      </View>
+    );
   };
 
   const renderItem = ({ item }: { item: any }) => {
@@ -270,6 +347,8 @@ export default function DriverApplicationsScreen() {
     );
   };
 
+  const isVehicleTab = activeFilter === 'MY_VEHICLES';
+
   const displayedApplications = applications.filter(item => {
     const job = item.jobs;
     if (activeFilter === 'PENDING') return item.status === 'PENDING';
@@ -286,7 +365,7 @@ export default function DriverApplicationsScreen() {
       {/* Header Mission Control */}
       <View style={[styles.headerHost, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>
@@ -325,11 +404,17 @@ export default function DriverApplicationsScreen() {
              >
                 <Text style={[styles.filterText, activeFilter === 'COMPLETED' && { color: '#fff' }]}>TAMAMLANAN</Text>
              </TouchableOpacity>
-             <TouchableOpacity 
-                style={[styles.filterTab, activeFilter === 'REJECTED' && { backgroundColor: '#EF4444' }]} 
+             <TouchableOpacity
+                style={[styles.filterTab, activeFilter === 'REJECTED' && { backgroundColor: '#EF4444' }]}
                 onPress={() => { Haptics.selectionAsync(); setActiveFilter('REJECTED'); }}
              >
                 <Text style={[styles.filterText, activeFilter === 'REJECTED' && { color: '#fff' }]}>RED</Text>
+             </TouchableOpacity>
+             <TouchableOpacity
+                style={[styles.filterTab, activeFilter === 'MY_VEHICLES' && { backgroundColor: '#3B82F6' }]}
+                onPress={() => { Haptics.selectionAsync(); setActiveFilter('MY_VEHICLES'); }}
+             >
+                <Text style={[styles.filterText, activeFilter === 'MY_VEHICLES' && { color: '#fff' }]}>🚛 ARAÇLARIM ({myAvailabilities.length})</Text>
              </TouchableOpacity>
            </ScrollView>
          </View>
@@ -342,25 +427,33 @@ export default function DriverApplicationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={displayedApplications}
+          data={isVehicleTab ? myAvailabilities : displayedApplications}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
+          renderItem={isVehicleTab ? renderAvailabilityCard : renderItem}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
              <View style={styles.emptyHost}>
-                <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
-                   <Ionicons name="file-tray-outline" size={40} color={theme.accent} />
+                <View style={[styles.emptyIconCircle, { backgroundColor: '#F1F5F9' }]}>
+                   <Ionicons name={isVehicleTab ? 'car-outline' : 'file-tray-outline'} size={40} color={theme.accent} />
                 </View>
-                <Text style={[styles.emptyTitle, { color: theme.text }]}>Henüz Başvuru Yok</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.textLight }]}>Şu an listelenecek bir başvurunuz bulunmuyor. Yeni ilanlara göz atarak ilk başvurunuzu yapabilirsiniz.</Text>
-                <TouchableOpacity style={styles.emptyResetBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); fetchMyApplications(true); }}>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>{isVehicleTab ? 'Araç İlanı Yok' : 'Henüz Başvuru Yok'}</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textLight }]}>
+                  {isVehicleTab
+                    ? 'Henüz boş araç ilanı oluşturmadınız. Ana ekrandan "Boş Araç" butonuna basarak ilan oluşturabilirsiniz.'
+                    : 'Şu an listelenecek bir başvurunuz bulunmuyor. Yeni ilanlara göz atarak ilk başvurunuzu yapabilirsiniz.'}
+                </Text>
+                <TouchableOpacity style={styles.emptyResetBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); isVehicleTab ? fetchMyAvailabilities() : fetchMyApplications(true); }}>
                    <Text style={[styles.emptyResetBtnText, { color: theme.accent }]}>SAYFAYI YENİLE</Text>
                 </TouchableOpacity>
              </View>
           }
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={() => fetchMyApplications(true)} tintColor={theme.accent} />
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => { isVehicleTab ? fetchMyAvailabilities() : fetchMyApplications(true); }}
+              tintColor={theme.accent}
+            />
           }
         />
       )}

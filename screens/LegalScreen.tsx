@@ -14,7 +14,7 @@ const LEGAL_DOCS = [
 ];
 
 export default function LegalScreen({ navigation }: any) {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -24,7 +24,7 @@ export default function LegalScreen({ navigation }: any) {
       {/* Immersive Mission Control Header */}
       <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>
@@ -63,7 +63,7 @@ export default function LegalScreen({ navigation }: any) {
                     onPress={() => navigation.navigate('LegalDetail', { docId: doc.id, title: doc.title })}
                   >
                     <View style={styles.docItemLeft}>
-                      <View style={[styles.iconBox, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                      <View style={[styles.iconBox, { backgroundColor: 'rgba(0,0,0,0.03)' }]}>
                         <Ionicons name={doc.icon as any} size={18} color={theme.accent} />
                       </View>
                       <Text style={[styles.docTitle, { color: theme.text }]}>{doc.title}</Text>

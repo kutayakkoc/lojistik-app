@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 
 export default function SupportScreen({ navigation }: any) {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handlePress = (type: 'whatsapp' | 'call' | 'mail') => {
@@ -42,7 +42,7 @@ export default function SupportScreen({ navigation }: any) {
         <Text style={[styles.cardLabel, { color: theme.text }]}>{label}</Text>
         <Text style={[styles.cardSub, { color: theme.textLight }]}>{sub}</Text>
       </View>
-      <View style={[styles.actionBadge, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
+      <View style={[styles.actionBadge, { backgroundColor: '#F1F5F9' }]}>
         <Ionicons name="link-outline" size={16} color={theme.accent} />
       </View>
     </TouchableOpacity>
@@ -55,7 +55,7 @@ export default function SupportScreen({ navigation }: any) {
       {/* Immersive Mission Control Header */}
       <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>

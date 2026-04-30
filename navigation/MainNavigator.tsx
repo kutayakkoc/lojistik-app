@@ -5,9 +5,12 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows, Radius, Spacing } from '../constants/Theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 import Dashboard from '../screens/Dashboard';
 import JobDetailScreen from '../screens/JobDetailScreen';
+import MapScreen from '../screens/MapScreen';
 import DriverApplicationsScreen from '../screens/DriverApplicationsScreen';
 import ShipperJobsScreen from '../screens/ShipperJobsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -40,10 +43,15 @@ function HomeStack() {
         component={Dashboard} 
         options={{ headerShown: false }} 
       />
-      <Stack.Screen 
-        name="JobDetail" 
-        component={JobDetailScreen} 
-        options={{ headerShown: false }} 
+      <Stack.Screen
+        name="JobDetail"
+        component={JobDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Map"
+        component={MapScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -121,33 +129,57 @@ function DriverAppStack() {
 export default function MainNavigator() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { theme, isDarkMode } = useTheme();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     fetchProfile();
+
+    AsyncStorage.getItem('@notif_unread').then(val => {
+      if (val) setUnreadCount(parseInt(val, 10));
+    });
+
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      setUnreadCount(prev => {
+        const next = prev + 1;
+        AsyncStorage.setItem('@notif_unread', String(next));
+        return next;
+      });
+    });
+
+    return () => sub.remove();
   }, []);
 
   const fetchProfile = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .limit(1)
-          .maybeSingle();
-          
-        if (!error && data) {
-          setRole(data.role);
-        }
-      }
-    } catch (e) {
-      console.log(e);
-    } finally {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
       setLoading(false);
+      return;
     }
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!error) {
+        setRole(data?.role ?? 'DRIVER');
+        setLoading(false);
+        return;
+      }
+
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+
+    // 3 deneme başarısız — varsayılan olarak DRIVER ile devam et
+    setRole('DRIVER');
+    setLoading(false);
   };
 
   if (loading) {
@@ -165,7 +197,7 @@ export default function MainNavigator() {
         tabBarActiveTintColor: theme.primaryLight,
         tabBarInactiveTintColor: theme.textLight,
         tabBarStyle: { 
-          backgroundColor: isDarkMode ? '#020617' : '#FFFFFF',
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: theme.border,
           height: 60 + insets.bottom,
@@ -217,10 +249,21 @@ export default function MainNavigator() {
             options={{ title: 'İlanlarım' }} 
           />
       )}
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileStack} 
-        options={{ title: 'Profilim' }} 
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStack}
+        options={{
+          title: 'Profilim',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+        listeners={{
+          tabPress: () => {
+            if (unreadCount > 0) {
+              setUnreadCount(0);
+              AsyncStorage.setItem('@notif_unread', '0');
+            }
+          },
+        }}
       />
     </Tab.Navigator>
   );

@@ -11,18 +11,6 @@ export const Colors = {
     danger: '#EF4444',
     success: '#10B981',
   },
-  dark: {
-    primary: '#020617', // Deep Obsidian Navy
-    primaryLight: '#1E293B',
-    accent: '#F38118', // Akkoç Corporate Orange
-    background: '#09090B',
-    surface: '#18181B', // Zinc-900 surface for depth
-    text: '#F8FAFC',
-    textLight: '#94A3B8',
-    border: '#27272A',
-    danger: '#F87171',
-    success: '#34D399',
-  }
 };
 
 export const Spacing = {

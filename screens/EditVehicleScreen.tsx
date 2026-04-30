@@ -17,8 +17,18 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
+const VEHICLE_TYPES: { label: string; icon: string }[] = [
+  { label: 'TIR', icon: '🚛' },
+  { label: 'Kamyon', icon: '🚚' },
+  { label: 'Kamyonet', icon: '🚐' },
+  { label: 'Frigo', icon: '❄️' },
+  { label: 'Tenteli', icon: '🏕️' },
+  { label: 'Açık Kasa', icon: '📦' },
+  { label: 'Lowbed', icon: '🔧' },
+];
+
 export default function EditVehicleScreen() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   
@@ -126,7 +136,7 @@ export default function EditVehicleScreen() {
       
       <View style={styles.header}>
         <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#f1f2f6' }]} 
+          style={[styles.backButton, { backgroundColor: '#f1f2f6' }]} 
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={20} color={theme.text} />
@@ -144,7 +154,7 @@ export default function EditVehicleScreen() {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.textLight }]}>Plaka Numarası</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f7f8fa', color: theme.text, borderColor: theme.border }]}
+              style={[styles.input, { backgroundColor: '#f7f8fa', color: theme.text, borderColor: theme.border }]}
               value={plateNumber}
               onChangeText={(text) => setPlateNumber(formatPlate(text))}
               placeholder="34 ABC 123"
@@ -157,22 +167,23 @@ export default function EditVehicleScreen() {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.textLight }]}>Araç Tipi</Text>
             <View style={styles.pickerContainer}>
-              {['TIR', 'Kamyon', 'Kamyonet'].map((type) => (
+              {VEHICLE_TYPES.map(({ label, icon }) => (
                 <TouchableOpacity
-                  key={type}
+                  key={label}
                   style={[
                     styles.pickerItem,
                     { borderColor: theme.border },
-                    vehicleType === type && { backgroundColor: theme.primary, borderColor: theme.primary }
+                    vehicleType === label && { backgroundColor: theme.primary, borderColor: theme.primary }
                   ]}
-                  onPress={() => setVehicleType(type)}
+                  onPress={() => setVehicleType(label)}
                 >
+                  <Text style={styles.pickerItemIcon}>{icon}</Text>
                   <Text style={[
                     styles.pickerItemText,
                     { color: theme.text },
-                    vehicleType === type && { color: '#fff' }
+                    vehicleType === label && { color: '#fff' }
                   ]}>
-                    {type}
+                    {label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -276,15 +287,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pickerItem: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: Radius.md,
     borderWidth: 1,
-    minWidth: '45%',
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  pickerItemIcon: {
+    fontSize: 16,
   },
   pickerItemText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   saveButton: {

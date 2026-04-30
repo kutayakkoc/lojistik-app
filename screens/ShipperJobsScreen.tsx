@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Platform, Alert, Linking, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Shadows, Radius } from '../constants/Theme';
@@ -9,19 +9,34 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
+const formatTurkishDate = (dateStr: string) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+};
+
+
 export default function ShipperJobsScreen() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [myJobs, setMyJobs] = useState<any[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'OPEN' | 'ASSIGNED' | 'COMPLETED'>('OPEN');
+  const [activeFilter, setActiveFilter] = useState<'OPEN' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED' | 'AVAILABLE_DRIVERS'>('OPEN');
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   useEffect(() => {
     fetchSession();
   }, []);
+
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      setActiveFilter(route.params.initialTab);
+    }
+  }, [route.params?.initialTab]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -36,7 +51,21 @@ export default function ShipperJobsScreen() {
     if (session?.user) {
       setUserId(session.user.id);
       fetchMyJobs(session.user.id);
+      fetchAvailableDrivers();
     }
+  };
+
+  const fetchAvailableDrivers = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('driver_availabilities')
+      .select(`
+        id, origin, destination, available_date, vehicle_type, notes,
+        profiles!driver_availabilities_driver_id_fkey(full_name, phone)
+      `)
+      .gte('available_date', today)
+      .order('available_date', { ascending: true });
+    setAvailableDrivers(data || []);
   };
 
   const fetchMyJobs = async (uid: string) => {
@@ -53,17 +82,128 @@ export default function ShipperJobsScreen() {
     setLoading(false);
   };
 
-  const formatTurkishDate = (dateStr: string) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  const handleDriverWhatsApp = (phone: string, driver: any) => {
+    const clean = phone.replace(/\D/g, '').replace(/^0/, '90');
+    const msg = `Merhaba ${driver.full_name}, boş araç ilanınızı gördüm. ${driver.origin} - ${driver.destination} güzergahında yük teklifim var, görüşebilir miyiz?`;
+    Linking.openURL(`whatsapp://send?phone=${clean}&text=${encodeURIComponent(msg)}`).catch(() =>
+      Alert.alert('Hata', 'WhatsApp açılamadı.')
+    );
   };
+
+  const handleDriverCall = (phone: string) => {
+    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() =>
+      Alert.alert('Hata', 'Arama başlatılamadı.')
+    );
+  };
+
+  const renderAvailableDriverCard = ({ item }: { item: any }) => {
+    const driver = item.profiles;
+    const isExpiringSoon = new Date(item.available_date).getTime() - Date.now() < 2 * 24 * 60 * 60 * 1000;
+    return (
+      <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={[styles.driverAvatar, { backgroundColor: theme.accent + '20' }]}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: theme.accent }}>
+                {driver?.full_name?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View>
+              <Text style={[styles.driverName, { color: theme.text }]}>{driver?.full_name || 'Şoför'}</Text>
+              <Text style={[styles.vehicleTag, { color: theme.accent }]}>🚛 {item.vehicle_type}</Text>
+            </View>
+          </View>
+          {isExpiringSoon && (
+            <View style={styles.urgentBadge}>
+              <Text style={styles.urgentText}>YAKINDA</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.routeRow}>
+          <Text style={[styles.driverRouteCity, { color: theme.text }]} numberOfLines={1}>{item.origin.toUpperCase()}</Text>
+          <View style={styles.driverRouteArrow}>
+            <View style={[styles.driverArrowLine, { backgroundColor: theme.border }]} />
+            <Ionicons name="chevron-forward" size={12} color={theme.accent} />
+          </View>
+          <Text style={[styles.driverRouteCity, { color: theme.text, textAlign: 'right' }]} numberOfLines={1}>{item.destination.toUpperCase()}</Text>
+        </View>
+
+        <View style={[styles.telemetryGrid, { marginTop: 12, marginBottom: 14 }]}>
+          <View style={styles.telemetryBox}>
+            <Text style={[styles.telemetryLabel, { color: theme.textLight }]}>MÜSAİT TARİH</Text>
+            <Text style={[styles.telemetryValue, { color: theme.text }]}>{formatTurkishDate(item.available_date)}</Text>
+          </View>
+          {item.notes ? (
+            <View style={[styles.telemetryBox, { borderLeftWidth: 1, borderLeftColor: theme.border, paddingLeft: 15 }]}>
+              <Text style={[styles.telemetryLabel, { color: theme.textLight }]}>NOT</Text>
+              <Text style={[styles.telemetryValue, { color: theme.text, fontSize: 12 }]} numberOfLines={2}>{item.notes}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#25D366', flex: 1 }]}
+            onPress={() => handleDriverWhatsApp(driver?.phone || '', { ...driver, origin: item.origin, destination: item.destination })}
+          >
+            <Ionicons name="logo-whatsapp" size={14} color="#fff" />
+            <Text style={[styles.actionBtnText, { color: '#fff' }]}>WHATSAPP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.accent, flex: 1 }]}
+            onPress={() => handleDriverCall(driver?.phone || '')}
+          >
+            <Ionicons name="call-outline" size={14} color="#fff" />
+            <Text style={[styles.actionBtnText, { color: '#fff' }]}>ARA</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const handleRepost = (item: any) => {
+    Alert.alert(
+      'Tekrar Yayınla',
+      `${item.origin} → ${item.destination} güzergahında yeni ilan oluşturulsun mu?`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Evet, Yayınla',
+          onPress: async () => {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const pickupDate = tomorrow.toISOString().split('T')[0];
+            const { error } = await supabase.from('jobs').insert({
+              shipper_id: userId,
+              origin: item.origin,
+              destination: item.destination,
+              cargo_details: item.cargo_details,
+              required_vehicle_type: item.required_vehicle_type,
+              price: item.price,
+              pickup_date: pickupDate,
+              status: 'OPEN',
+            });
+            if (error) {
+              Alert.alert('Hata', error.message);
+            } else {
+              Alert.alert('Başarılı', 'İlan yeniden yayınlandı.');
+              if (userId) fetchMyJobs(userId);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'OPEN': return { label: 'AKTİF', color: '#2ECC71' };
       case 'ASSIGNED': return { label: 'YOLDA', color: '#F59E0B' };
       case 'COMPLETED': return { label: 'BİTTİ', color: theme.textLight };
+      case 'CANCELLED': return { label: 'İPTAL', color: '#EF4444' };
       default: return { label: status, color: theme.border };
     }
   };
@@ -76,18 +216,21 @@ export default function ShipperJobsScreen() {
         onPress={() => navigation.navigate('JobDetail', { item, role: 'SHIPPER' })}
         activeOpacity={0.8}
       >
+        <View style={{ marginBottom: 12, alignSelf: 'flex-start' }}>
+          <View style={[styles.statusBadge, { backgroundColor: config.color + '15' }]}>
+            <View style={[styles.statusDot, { backgroundColor: config.color }]} />
+            <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
+          </View>
+        </View>
+
         <View style={styles.specHeader}>
-          <View style={styles.routeHeader}>
-            <Text style={[styles.routeCity, { color: theme.text }]}>{item.origin.toUpperCase()}</Text>
+          <View style={[styles.routeHeader, { flex: 1 }]}>
+            <Text style={[styles.routeCity, { color: theme.text, flex: 1 }]} numberOfLines={1}>{item.origin.toUpperCase()}</Text>
             <View style={styles.routeArrow}>
                <View style={[styles.arrowLine, { backgroundColor: theme.border }]} />
                <Ionicons name="chevron-forward" size={12} color={theme.accent} />
             </View>
-            <Text style={[styles.routeCity, { color: theme.text }]}>{item.destination.toUpperCase()}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: config.color + '15' }]}>
-            <View style={[styles.statusDot, { backgroundColor: config.color }]} />
-            <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
+            <Text style={[styles.routeCity, { color: theme.text, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{item.destination.toUpperCase()}</Text>
           </View>
         </View>
 
@@ -101,7 +244,7 @@ export default function ShipperJobsScreen() {
           <View style={[styles.telemetryBox, { borderLeftWidth: 1, borderLeftColor: theme.border, paddingLeft: 15 }]}>
             <Text style={[styles.telemetryLabel, { color: theme.textLight }]}>TEKLİF (₺)</Text>
             <Text style={[styles.telemetryValue, { color: theme.accent, fontWeight: '900' }]}>
-              {item.price ? `${item.price.toLocaleString('tr-TR')} + KDV` : '-'}
+              {item.price ? `${item.price.toLocaleString('tr-TR')} ₺ + KDV` : '-'}
             </Text>
           </View>
           <View style={[styles.telemetryBox, { borderLeftWidth: 1, borderLeftColor: theme.border, paddingLeft: 15 }]}>
@@ -112,9 +255,23 @@ export default function ShipperJobsScreen() {
           </View>
         </View>
 
-        <View style={[styles.actionBtn, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
-           <Text style={[styles.actionBtnText, { color: item.status === 'COMPLETED' ? theme.text : theme.accent }]}>İLAN DETAYLARI</Text>
-           <Ionicons name="chevron-forward" size={14} color={item.status === 'COMPLETED' ? theme.text : theme.accent} />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(item.status === 'COMPLETED' || item.status === 'CANCELLED') && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: theme.accent + '15', flex: 1 }]}
+              onPress={() => handleRepost(item)}
+            >
+              <Ionicons name="refresh-outline" size={14} color={theme.accent} />
+              <Text style={[styles.actionBtnText, { color: theme.accent }]}>TEKRAR YAYINLA</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#F1F5F9', flex: 1 }]}
+            onPress={() => navigation.navigate('JobDetail', { item, role: 'SHIPPER' })}
+          >
+            <Text style={[styles.actionBtnText, { color: item.status === 'COMPLETED' ? theme.text : theme.accent }]}>DETAYLAR</Text>
+            <Ionicons name="chevron-forward" size={14} color={item.status === 'COMPLETED' ? theme.text : theme.accent} />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -172,13 +329,15 @@ export default function ShipperJobsScreen() {
 
   const displayedJobs = myJobs.filter(job => job.status === activeFilter);
 
+  const isDriverTab = activeFilter === 'AVAILABLE_DRIVERS';
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style="light" />
 
       <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>
@@ -195,47 +354,48 @@ export default function ShipperJobsScreen() {
           </View>
         </View>
         
-        <View style={styles.filterContainer}>
-          <TouchableOpacity 
-             style={[styles.filterTab, activeFilter === 'OPEN' && { backgroundColor: '#2ECC71' }]} 
-             onPress={() => setActiveFilter('OPEN')}
-          >
-             <Text style={[styles.filterText, activeFilter === 'OPEN' ? { color: '#000' } : { color: 'rgba(255,255,255,0.6)' }]}>AKTİF İLAN</Text>
-             {activeFilter === 'OPEN' && <View style={styles.filterDot} />}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-             style={[styles.filterTab, activeFilter === 'ASSIGNED' && { backgroundColor: '#F59E0B' }]} 
-             onPress={() => setActiveFilter('ASSIGNED')}
-          >
-             <Text style={[styles.filterText, activeFilter === 'ASSIGNED' ? { color: '#000' } : { color: 'rgba(255,255,255,0.6)' }]}>YOLDA</Text>
-             {activeFilter === 'ASSIGNED' && <View style={styles.filterDot} />}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-             style={[styles.filterTab, activeFilter === 'COMPLETED' && { backgroundColor: 'rgba(255,255,255,0.2)' }]} 
-             onPress={() => setActiveFilter('COMPLETED')}
-          >
-             <Text style={[styles.filterText, activeFilter === 'COMPLETED' ? { color: '#fff' } : { color: 'rgba(255,255,255,0.6)' }]}>BİTEN</Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
+          {([
+            ['OPEN', 'AKTİF', '#2ECC71'],
+            ['ASSIGNED', 'YOLDA', '#F59E0B'],
+            ['COMPLETED', 'BİTEN', 'rgba(255,255,255,0.2)'],
+            ['CANCELLED', 'İPTAL', '#EF4444'],
+            ['AVAILABLE_DRIVERS', `🚛 MÜSAİT (${availableDrivers.length})`, '#3B82F6'],
+          ] as const).map(([filter, label, color]) => (
+            <TouchableOpacity
+              key={filter}
+              style={[styles.filterTab, activeFilter === filter && { backgroundColor: color }]}
+              onPress={() => setActiveFilter(filter)}
+            >
+              <Text style={[styles.filterText, activeFilter === filter ? { color: filter === 'OPEN' || filter === 'ASSIGNED' ? '#000' : '#fff' } : { color: 'rgba(255,255,255,0.6)' }]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FlatList
-        data={displayedJobs}
+        data={isDriverTab ? availableDrivers : displayedJobs}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={viewMode === 'list' ? renderJobListItem : renderJobItem}
+        renderItem={isDriverTab ? renderAvailableDriverCard : (viewMode === 'list' ? renderJobListItem : renderJobItem)}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => userId && fetchMyJobs(userId)} tintColor={theme.accent} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={() => { if (isDriverTab) fetchAvailableDrivers(); else if (userId) fetchMyJobs(userId); }}
+            tintColor={theme.accent}
+          />
         }
         ListEmptyComponent={
           !loading ? (
-             <View style={styles.emptyBox}>
-                <Ionicons name="folder-open-outline" size={48} color={theme.textLight} style={{ opacity: 0.5, marginBottom: 15 }} />
-                <Text style={[styles.emptyText, { color: theme.textLight }]}>Bu aşamada listelenecek ilan bulunmuyor.</Text>
-             </View>
+            <View style={styles.emptyBox}>
+              <Ionicons name={isDriverTab ? 'car-outline' : 'folder-open-outline'} size={48} color={theme.textLight} style={{ opacity: 0.5, marginBottom: 15 }} />
+              <Text style={[styles.emptyText, { color: theme.textLight }]}>
+                {isDriverTab ? 'Şu an müsait araç ilanı bulunmuyor.' : 'Bu aşamada listelenecek ilan bulunmuyor.'}
+              </Text>
+            </View>
           ) : null
         }
       />
@@ -251,8 +411,8 @@ const styles = StyleSheet.create({
   titleContainer: { flex: 1 },
   viewToggle: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 4 },
   toggleBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  filterContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 10 },
-  filterTab: { flex: 1, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  filterContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 10, paddingBottom: 10 },
+  filterTab: { height: 40, paddingHorizontal: 16, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
   filterText: { fontSize: 11, fontWeight: '900' },
   filterDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#000' },
   listContainer: { padding: 20, paddingBottom: 100 },
@@ -284,5 +444,14 @@ const styles = StyleSheet.create({
   listPremiumSpecText: { fontSize: 10, fontWeight: '800' },
   listPremiumDivider: { width: 1, height: 10, marginHorizontal: 8, opacity: 0.15 },
   emptyBox: { alignItems: 'center', marginTop: 100 },
-  emptyText: { fontSize: 13, fontWeight: '600' }
+  emptyText: { fontSize: 13, fontWeight: '600' },
+  driverAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  driverName: { fontSize: 15, fontWeight: '900' },
+  vehicleTag: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+  urgentBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  urgentText: { fontSize: 9, fontWeight: '900', color: '#92400E', letterSpacing: 1 },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  driverRouteCity: { flex: 1, fontSize: 16, fontWeight: '900', letterSpacing: -0.5 },
+  driverRouteArrow: { flexDirection: 'row', alignItems: 'center', width: 50 },
+  driverArrowLine: { flex: 1, height: 2, borderRadius: 1 },
 });

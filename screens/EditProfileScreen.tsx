@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
 export default function EditProfileScreen() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   
@@ -53,7 +53,7 @@ export default function EditProfileScreen() {
       }
       setProfile(profileData);
       setFullName(profileData.full_name || '');
-      setPhone(profileData.phone || '');
+      setPhone(formatPhone(profileData.phone || ''));
     } catch (error: any) {
       Alert.alert('Hata', error.message);
     } finally {
@@ -90,9 +90,9 @@ export default function EditProfileScreen() {
 
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
-          full_name: fullName, 
-          phone: phone 
+        .update({
+          full_name: fullName,
+          phone: phone.replace(/\s/g, '')
         })
         .eq('id', session.user.id);
 
@@ -123,7 +123,7 @@ export default function EditProfileScreen() {
       
       <View style={styles.header}>
         <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#f1f2f6' }]} 
+          style={[styles.backButton, { backgroundColor: '#f1f2f6' }]} 
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={20} color={theme.text} />
@@ -141,7 +141,7 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.textLight }]}>Ad Soyad</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f7f8fa', color: theme.text, borderColor: theme.border }]}
+              style={[styles.input, { backgroundColor: '#f7f8fa', color: theme.text, borderColor: theme.border }]}
               value={fullName}
               onChangeText={setFullName}
               placeholder="Ad Soyad"
@@ -152,7 +152,7 @@ export default function EditProfileScreen() {
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: theme.textLight }]}>Telefon Numarası</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f7f8fa', color: theme.text, borderColor: theme.border }]}
+              style={[styles.input, { backgroundColor: '#f7f8fa', color: theme.text, borderColor: theme.border }]}
               value={phone}
               onChangeText={(text) => setPhone(formatPhone(text))}
               placeholder="0 5XX XXX XX XX"

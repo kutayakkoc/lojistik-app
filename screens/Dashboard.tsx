@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Dimensions, Modal, Platform, Image } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-modern-datepicker';
 import { supabase } from '../lib/supabase';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { registerForPushNotificationsAsync, savePushTokenToProfile, broadcastToAllDrivers } from '../lib/notifications';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +50,7 @@ const getNearbyDates = () => {
 };
 
 export default function Dashboard() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const [role, setRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -76,8 +77,24 @@ export default function Dashboard() {
   const [searchOrigin, setSearchOrigin] = useState('');
   const [searchDestination, setSearchDestination] = useState('');
   const [filterVehicleType, setFilterVehicleType] = useState('Hepsi');
-  const [isSearchVisible, setIsSearchVisible] = useState(false); 
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [sortMode, setSortMode] = useState<'newest' | 'price_high' | 'date_near'>('newest');
+
+  // Sık kullanılan şehirler & taslak
+  const [recentCities, setRecentCities] = useState<string[]>([]);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  // Boş Araç İlanı
+  const [availModalVisible, setAvailModalVisible] = useState(false);
+  const [availOrigin, setAvailOrigin] = useState('');
+  const [availDestination, setAvailDestination] = useState('');
+  const [availDate, setAvailDate] = useState('');
+  const [availNotes, setAvailNotes] = useState('');
+  const [availSaving, setAvailSaving] = useState(false);
+
+  // Smart matching
+  const [matchingDriverCount, setMatchingDriverCount] = useState<number | null>(null);
 
   // Data states
   const [openJobs, setOpenJobs] = useState<any[]>([]);
@@ -85,12 +102,62 @@ export default function Dashboard() {
   const [driverVehicle, setDriverVehicle] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [todayJobCount, setTodayJobCount] = useState(0);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const vehicleTypes = ['TIR', 'Kamyon', 'Kamyonet'];
+  const vehicleTypes = [
+    { label: 'TIR', icon: '🚛' },
+    { label: 'Kamyon', icon: '🚚' },
+    { label: 'Kamyonet', icon: '🚐' },
+    { label: 'Frigo', icon: '❄️' },
+    { label: 'Tenteli', icon: '🏕️' },
+    { label: 'Açık Kasa', icon: '📦' },
+    { label: 'Lowbed', icon: '🔧' },
+  ];
 
   useEffect(() => {
     fetchSessionAndProfile();
+    AsyncStorage.getItem('@recent_cities').then(raw => {
+      if (raw) setRecentCities(JSON.parse(raw));
+    });
+    AsyncStorage.getItem('@job_draft').then(raw => {
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.origin || d.destination || d.cargoDetails) {
+        setOrigin(d.origin || '');
+        setDestination(d.destination || '');
+        setCargoDetails(d.cargoDetails || '');
+        setPickupDate(d.pickupDate || '');
+        setRequiredVehicleType(d.requiredVehicleType || 'TIR');
+        setPrice(d.price || '');
+        setIsQuote(d.isQuote || false);
+        setDraftLoaded(true);
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    if (!userId || role !== 'SHIPPER') return;
+    const draft = { origin, destination, cargoDetails, pickupDate, requiredVehicleType, price, isQuote };
+    if (!origin && !destination && !cargoDetails) return;
+    AsyncStorage.setItem('@job_draft', JSON.stringify(draft));
+  }, [origin, destination, cargoDetails, pickupDate, requiredVehicleType, price, isQuote]);
+
+  useEffect(() => {
+    if (role !== 'SHIPPER' || !origin) {
+      setMatchingDriverCount(null);
+      return;
+    }
+    const checkDrivers = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { count } = await supabase
+        .from('driver_availabilities')
+        .select('id', { count: 'exact', head: true })
+        .eq('origin', origin)
+        .gte('available_date', today);
+      setMatchingDriverCount(count ?? 0);
+    };
+    checkDrivers();
+  }, [origin, role]);
 
   useEffect(() => {
     if (userId) {
@@ -147,8 +214,7 @@ export default function Dashboard() {
         fetchAppliedJobIds(user.id);
         fetchDriverVehicle(user.id);
       }
-    } catch (error: any) {
-      console.log('fetchSessionAndProfile Catch:', error.message);
+      // fetchSessionAndProfile catch
     } finally {
       setLoading(false);
     }
@@ -165,7 +231,7 @@ export default function Dashboard() {
         setAppliedJobIds(data.map(r => r.job_id));
       }
     } catch (e) {
-      console.log('fetchAppliedJobIds Error:', e);
+      console.error('fetchAppliedJobIds:', e);
     }
   };
 
@@ -194,13 +260,17 @@ export default function Dashboard() {
         .gte('pickup_date', today) 
         .order('created_at', { ascending: false });
 
-      if (!error) {
+      if (error) {
+        setFetchError('İlanlar yüklenemedi. Lütfen internet bağlantınızı kontrol edin.');
+      } else {
+        setFetchError(null);
         setOpenJobs(data || []);
         const count = data?.filter(j => j.pickup_date === today).length || 0;
-        setTodayJobCount(count); 
+        setTodayJobCount(count);
       }
     } catch (e) {
-      console.error(e);
+      console.error('fetchOpenJobs:', e);
+      setFetchError('İlanlar yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -244,6 +314,8 @@ export default function Dashboard() {
       setUnloadingDate('');
       setPrice('');
       setIsQuote(false);
+      setDraftLoaded(false);
+      AsyncStorage.removeItem('@job_draft');
       fetchOpenJobs();
     } catch (error: any) {
       Alert.alert('Hata', error.message);
@@ -252,31 +324,73 @@ export default function Dashboard() {
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) {
-      const offsetDate = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000));
-      const formatted = offsetDate.toISOString().split('T')[0];
-      setPickupDate(formatted);
-    } else if (event.type === 'dismissed') {
-      setShowDatePicker(false);
+  const handlePostAvailability = async () => {
+    if (!availOrigin || !availDestination || !availDate) {
+      Alert.alert('Uyarı', 'Lütfen nereden, nereye ve tarih alanlarını doldurun.');
+      return;
     }
+    try {
+      setAvailSaving(true);
+      const { error } = await supabase.from('driver_availabilities').insert({
+        driver_id: userId,
+        origin: availOrigin,
+        destination: availDestination,
+        available_date: availDate,
+        vehicle_type: driverVehicle?.vehicle_type || 'TIR',
+        notes: availNotes || null,
+      });
+      if (error) throw error;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Başarılı', 'Boş araç ilanınız yayınlandı.');
+      setAvailModalVisible(false);
+      setAvailOrigin('');
+      setAvailDestination('');
+      setAvailDate('');
+      setAvailNotes('');
+    } catch (e: any) {
+      Alert.alert('Hata', e.message);
+    } finally {
+      setAvailSaving(false);
+    }
+  };
+
+  const onDateChange = (date: string) => {
+    // react-native-modern-datepicker returns YYYY/MM/DD
+    const formatted = date.replace(/\//g, '-');
+    setPickupDate(formatted);
+    setShowDatePicker(false);
   };
 
   const handleCitySelect = (city: string) => {
     Haptics.selectionAsync();
-    if (cityTarget === 'origin') setOrigin(city);
-    else setDestination(city);
+    if (availModalVisible) {
+      if (cityTarget === 'origin') setAvailOrigin(city);
+      else setAvailDestination(city);
+    } else {
+      if (cityTarget === 'origin') setOrigin(city);
+      else setDestination(city);
+    }
     setCityModalVisible(false);
     setCitySearch('');
+    setRecentCities(prev => {
+      const next = [city, ...prev.filter(c => c !== city)].slice(0, 5);
+      AsyncStorage.setItem('@recent_cities', JSON.stringify(next));
+      return next;
+    });
   };
 
-  const filteredJobs = openJobs.filter(job => {
-    const matchOrigin = job.origin.toLowerCase().includes(searchOrigin.toLowerCase());
-    const matchDest = job.destination.toLowerCase().includes(searchDestination.toLowerCase());
-    const matchVehicle = filterVehicleType === 'Hepsi' || job.required_vehicle_type === filterVehicleType;
-    return matchOrigin && matchDest && matchVehicle;
-  });
+  const filteredJobs = openJobs
+    .filter(job => {
+      const matchOrigin = (job.origin || '').toLowerCase().includes(searchOrigin.toLowerCase());
+      const matchDest = (job.destination || '').toLowerCase().includes(searchDestination.toLowerCase());
+      const matchVehicle = filterVehicleType === 'Hepsi' || job.required_vehicle_type === filterVehicleType;
+      return matchOrigin && matchDest && matchVehicle;
+    })
+    .sort((a, b) => {
+      if (sortMode === 'price_high') return (b.price || 0) - (a.price || 0);
+      if (sortMode === 'date_near') return new Date(a.pickup_date).getTime() - new Date(b.pickup_date).getTime();
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const formatTurkishDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -413,7 +527,7 @@ export default function Dashboard() {
           </View>
         </View>
 
-        <View style={[styles.actionBtn, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
+        <View style={[styles.actionBtn, { backgroundColor: '#F1F5F9' }]}>
            <Text style={[styles.actionBtnText, { color: theme.accent }]}>İLAN DETAYLARI</Text>
            <Ionicons name="chevron-forward" size={14} color={theme.accent} />
         </View>
@@ -425,8 +539,8 @@ export default function Dashboard() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-      <LinearGradient colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <StatusBar style="dark" />
+      <LinearGradient colors={[theme.primary, '#f35d18']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greetingHeader}>Hoş Geldin,</Text>
@@ -453,6 +567,15 @@ export default function Dashboard() {
            </View>
            {role === 'DRIVER' && (
              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+               <TouchableOpacity
+                 style={[styles.searchToggle, { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, width: 'auto' }]}
+                 onPress={() => setAvailModalVisible(true)}
+               >
+                 <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🚛 BOŞ ARAÇ</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={styles.searchToggle} onPress={() => navigation.navigate('Map')}>
+                  <Ionicons name="map-outline" size={20} color="#fff" />
+               </TouchableOpacity>
                <TouchableOpacity style={styles.searchToggle} onPress={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
                   <Ionicons name={viewMode === 'card' ? "list-outline" : "grid-outline"} size={20} color="#fff" />
                </TouchableOpacity>
@@ -467,13 +590,22 @@ export default function Dashboard() {
       {role === 'SHIPPER' ? (
         <ScrollView contentContainerStyle={styles.shipperContainer} showsVerticalScrollIndicator={false}>
           <View style={[styles.shipperCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {draftLoaded && (
+              <TouchableOpacity
+                style={styles.draftBanner}
+                onPress={() => { setDraftLoaded(false); setOrigin(''); setDestination(''); setCargoDetails(''); setPickupDate(''); setPrice(''); setIsQuote(false); AsyncStorage.removeItem('@job_draft'); }}
+              >
+                <Ionicons name="document-text-outline" size={16} color="#F59E0B" />
+                <Text style={styles.draftBannerText}>Taslak yüklendi — temizlemek için dokun</Text>
+              </TouchableOpacity>
+            )}
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Yük İlanı Oluştur</Text>
             
             <View style={styles.formRow}>
               <View style={styles.inputWrap}>
                 <Text style={[styles.inputLabel, { color: theme.textLight }]}>NEREDEN</Text>
-                <TouchableOpacity 
-                  style={[styles.formInput, { justifyContent: 'center', backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }]}
+                <TouchableOpacity
+                  style={[styles.formInput, { justifyContent: 'center', backgroundColor: '#F1F5F9' }]}
                   onPress={() => { setCityTarget('origin'); setCityModalVisible(true); }}
                 >
                   <Text style={{ color: origin ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
@@ -483,8 +615,8 @@ export default function Dashboard() {
               </View>
               <View style={styles.inputWrap}>
                 <Text style={[styles.inputLabel, { color: theme.textLight }]}>NEREYE</Text>
-                <TouchableOpacity 
-                  style={[styles.formInput, { justifyContent: 'center', backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }]}
+                <TouchableOpacity
+                  style={[styles.formInput, { justifyContent: 'center', backgroundColor: '#F1F5F9' }]}
                   onPress={() => { setCityTarget('destination'); setCityModalVisible(true); }}
                 >
                   <Text style={{ color: destination ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
@@ -494,12 +626,23 @@ export default function Dashboard() {
               </View>
             </View>
 
+            {matchingDriverCount !== null && matchingDriverCount > 0 && (
+              <TouchableOpacity
+                style={styles.matchBanner}
+                onPress={() => navigation.navigate('ShipperJobs', { screen: 'ShipperJobsMain', params: { initialTab: 'AVAILABLE_DRIVERS' } })}
+              >
+                <Ionicons name="flash" size={15} color="#92400E" />
+                <Text style={styles.matchBannerText}>{origin} çıkışlı {matchingDriverCount} müsait şoför var</Text>
+                <Ionicons name="chevron-forward" size={14} color="#92400E" />
+              </TouchableOpacity>
+            )}
+
             <View style={styles.inputWrapFull}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <Text style={[styles.inputLabel, { color: theme.textLight }]}>TEKLİF EDİLEN FİYAT (₺)</Text>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: theme.accent, opacity: 0.8 }}>+ KDV DAHİL DEĞİLDİR</Text>
               </View>
-              <View style={[styles.formInput, { flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }, isQuote && { opacity: 0.5 }]}>
+              <View style={[styles.formInput, { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9' }, isQuote && { opacity: 0.5 }]}>
                 <Ionicons name="cash-outline" size={18} color={theme.accent} style={{ marginRight: 10 }} />
                 <TextInput 
                   style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '600' }}
@@ -523,7 +666,7 @@ export default function Dashboard() {
             <View style={styles.inputWrapFull}>
               <Text style={[styles.inputLabel, { color: theme.textLight }]}>YÜK DETAYLARI</Text>
               <TextInput 
-                style={[styles.formInputLarge, { color: theme.text, backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }]}
+                style={[styles.formInputLarge, { color: theme.text, backgroundColor: '#F1F5F9' }]}
                 placeholder="Örn: 20 Ton Demir..."
                 placeholderTextColor="#94A3B8"
                 multiline
@@ -545,7 +688,7 @@ export default function Dashboard() {
                          key={d.id} 
                          style={[
                             styles.dateCard, 
-                            { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' },
+                            { backgroundColor: '#F1F5F9' },
                             pickupDate === d.fullDate && { backgroundColor: theme.accent, borderColor: theme.accent }
                          ]} 
                          onPress={() => setPickupDate(d.fullDate)}
@@ -556,7 +699,7 @@ export default function Dashboard() {
                       </TouchableOpacity>
                    ))}
                    <TouchableOpacity 
-                      style={[styles.dateCard, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', justifyContent: 'center' }]} 
+                      style={[styles.dateCard, { backgroundColor: '#F1F5F9', justifyContent: 'center' }]} 
                       onPress={() => setShowDatePicker(true)}
                    >
                       <Ionicons name="calendar" size={20} color={theme.textLight} />
@@ -569,13 +712,14 @@ export default function Dashboard() {
             <View style={styles.inputWrapFull}>
               <Text style={[styles.inputLabel, { color: theme.textLight }]}>ARAÇ TİPİ</Text>
               <View style={styles.vehicleTypeSelector}>
-                 {vehicleTypes.map(v => (
-                   <TouchableOpacity 
-                     key={v} 
-                     onPress={() => setRequiredVehicleType(v)}
-                     style={[styles.vTypeBtn, requiredVehicleType === v && { backgroundColor: theme.accent }]}
+                 {vehicleTypes.map(({ label, icon }) => (
+                   <TouchableOpacity
+                     key={label}
+                     onPress={() => setRequiredVehicleType(label)}
+                     style={[styles.vTypeBtn, requiredVehicleType === label && { backgroundColor: theme.accent }]}
                    >
-                     <Text style={[styles.vTypeBtnText, requiredVehicleType === v && { color: '#fff' }]}>{v}</Text>
+                     <Text style={styles.vTypeBtnIcon}>{icon}</Text>
+                     <Text style={[styles.vTypeBtnText, requiredVehicleType === label && { color: '#fff' }]}>{label}</Text>
                    </TouchableOpacity>
                  ))}
               </View>
@@ -589,22 +733,22 @@ export default function Dashboard() {
       ) : (
         <View style={{ flex: 1 }}>
           {isSearchVisible && (
-            <View style={[styles.searchPanel, { backgroundColor: isDarkMode ? '#1E293B' : '#fff' }]}>
+            <View style={[styles.searchPanel, { backgroundColor: '#fff' }]}>
                <View style={styles.searchRow}>
-                  <View style={[styles.searchInputWrapper, { backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }]}>
+                  <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
                      <Ionicons name="location-outline" size={18} color={theme.textLight} />
-                     <TextInput 
-                       placeholder="Nereden..." 
+                     <TextInput
+                       placeholder="Nereden..."
                        placeholderTextColor={theme.textLight}
                        style={[styles.searchInput, { color: theme.text }]}
                        value={searchOrigin}
                        onChangeText={setSearchOrigin}
                      />
                   </View>
-                  <View style={[styles.searchInputWrapper, { backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }]}>
+                  <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
                      <Ionicons name="flag-outline" size={18} color={theme.textLight} />
-                     <TextInput 
-                       placeholder="Nereye..." 
+                     <TextInput
+                       placeholder="Nereye..."
                        placeholderTextColor={theme.textLight}
                        style={[styles.searchInput, { color: theme.text }]}
                        value={searchDestination}
@@ -612,6 +756,33 @@ export default function Dashboard() {
                      />
                   </View>
                </View>
+               <View style={styles.sortRow}>
+                 {([['newest', '🕐', 'En Yeni'], ['date_near', '📅', 'Yakın Tarih'], ['price_high', '💰', 'Yüksek Fiyat']] as const).map(([mode, icon, label]) => (
+                   <TouchableOpacity
+                     key={mode}
+                     onPress={() => setSortMode(mode)}
+                     style={[styles.sortChip, sortMode === mode && { backgroundColor: theme.primary }]}
+                   >
+                     <Text style={styles.sortChipIcon}>{icon}</Text>
+                     <Text style={[styles.sortChipText, { color: sortMode === mode ? '#fff' : theme.text }]}>{label}</Text>
+                   </TouchableOpacity>
+                 ))}
+               </View>
+               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipScroll} contentContainerStyle={styles.filterChipRow}>
+                 {[{ label: 'Hepsi', icon: '🔍' }, ...vehicleTypes].map(({ label, icon }) => {
+                   const active = filterVehicleType === label;
+                   return (
+                     <TouchableOpacity
+                       key={label}
+                       onPress={() => setFilterVehicleType(label)}
+                       style={[styles.filterChip, active && { backgroundColor: theme.accent }]}
+                     >
+                       <Text style={styles.filterChipIcon}>{icon}</Text>
+                       <Text style={[styles.filterChipText, { color: active ? '#fff' : theme.text }]}>{label}</Text>
+                     </TouchableOpacity>
+                   );
+                 })}
+               </ScrollView>
             </View>
           )}
 
@@ -628,16 +799,29 @@ export default function Dashboard() {
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                 <View style={styles.emptyWrap}>
-                    <View style={[styles.emptyIconCircle, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
-                       <Ionicons name="search-outline" size={40} color={theme.accent} />
+                fetchError ? (
+                  <View style={styles.emptyWrap}>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: '#FEE2E2' }]}>
+                      <Ionicons name="wifi-outline" size={40} color="#EF4444" />
+                    </View>
+                    <Text style={[styles.emptyTitle, { color: theme.text }]}>Bağlantı Hatası</Text>
+                    <Text style={[styles.emptySubtitle, { color: theme.textLight }]}>{fetchError}</Text>
+                    <TouchableOpacity style={styles.emptyResetBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); fetchOpenJobs(true); }}>
+                      <Text style={[styles.emptyResetBtnText, { color: theme.accent }]}>TEKRAR DENE</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.emptyWrap}>
+                    <View style={[styles.emptyIconCircle, { backgroundColor: '#F1F5F9' }]}>
+                      <Ionicons name="search-outline" size={40} color={theme.accent} />
                     </View>
                     <Text style={[styles.emptyTitle, { color: theme.text }]}>İlan Bulunamadı</Text>
                     <Text style={[styles.emptySubtitle, { color: theme.textLight }]}>Aramanıza veya seçtiğiniz kriterlere uygun aktif bir yük ilanı şu an bulunmuyor.</Text>
                     <TouchableOpacity style={styles.emptyResetBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); fetchOpenJobs(true); }}>
-                       <Text style={[styles.emptyResetBtnText, { color: theme.accent }]}>LİSTEYİ YENİLE</Text>
+                      <Text style={[styles.emptyResetBtnText, { color: theme.accent }]}>LİSTEYİ YENİLE</Text>
                     </TouchableOpacity>
-                 </View>
+                  </View>
+                )
               }
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={() => fetchOpenJobs(true)} tintColor={theme.accent} />
@@ -647,39 +831,109 @@ export default function Dashboard() {
         </View>
       )}
 
-      {showDatePicker && Platform.OS === 'ios' ? (
-        <Modal transparent animationType="slide" visible={showDatePicker} onRequestClose={() => setShowDatePicker(false)}>
-           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-              <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowDatePicker(false)} activeOpacity={1} />
-              <View style={{ backgroundColor: theme.surface, padding: 20, paddingBottom: insets.bottom + 20, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
-                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                     <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Yükleme Tarihi Seçin</Text>
-                     <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ backgroundColor: theme.primary + '20', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 12 }}>
-                        <Text style={{ color: theme.primary, fontWeight: '800', fontSize: 13 }}>Tamam</Text>
-                     </TouchableOpacity>
-                 </View>
-                 <DateTimePicker
-                   value={pickupDate ? new Date(pickupDate) : new Date()}
-                   mode="date"
-                   display="spinner"
-                   onChange={onDateChange}
-                   minimumDate={new Date()}
-                   themeVariant={isDarkMode ? "dark" : "light"}
-                   textColor={theme.text}
-                   style={{ height: 200 }}
-                 />
-              </View>
-           </View>
-        </Modal>
-      ) : showDatePicker && Platform.OS === 'android' ? (
-        <DateTimePicker
-          value={pickupDate ? new Date(pickupDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          minimumDate={new Date()}
-        />
-      ) : null}
+      <Modal transparent animationType="fade" visible={showDatePicker} onRequestClose={() => setShowDatePicker(false)}>
+         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center' }}>
+            <View style={{ margin: 20, backgroundColor: theme.surface, borderRadius: 24, padding: 20, ...Shadows.large }}>
+               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                   <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>Tarih Seçin</Text>
+                   <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ padding: 5 }}>
+                      <Ionicons name="close-circle" size={28} color={theme.textLight} />
+                   </TouchableOpacity>
+               </View>
+               <DatePicker
+                 isGregorian={true}
+                 mode="calendar"
+                 minimumDate={new Date().toLocaleDateString('sv-SE').replace(/-/g, '/')}
+                 selected={pickupDate ? pickupDate.replace(/-/g, '/') : ''}
+                 onSelectedChange={onDateChange}
+                 onDateChange={onDateChange}
+                 onMonthYearChange={() => {}}
+                 options={{
+                   backgroundColor: theme.surface,
+                   textHeaderColor: theme.accent,
+                   textDefaultColor: theme.text,
+                   selectedTextColor: '#fff',
+                   mainColor: theme.accent,
+                   textSecondaryColor: theme.textLight,
+                   borderColor: 'rgba(122, 146, 165, 0.1)',
+                 }}
+                 configs={{
+                   dayNames: ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'],
+                   dayNamesShort: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
+                   monthNames: [
+                     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+                   ],
+                   selectedFormat: 'YYYY/MM/DD',
+                   dateFormat: 'YYYY/MM/DD',
+                   timeFormat: 'HH:mm',
+                   hour: 'Saat',
+                   minute: 'Dakika',
+                 }}
+               />
+            </View>
+         </View>
+      </Modal>
+
+      {/* Boş Araç İlanı Modalı */}
+      <Modal visible={availModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setAvailModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: Platform.OS === 'ios' ? 50 : 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+            <TouchableOpacity onPress={() => setAvailModalVisible(false)} style={{ padding: 5, marginRight: 15 }}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>🚛 Boş Araç İlan Et</Text>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <Text style={{ fontSize: 12, color: theme.textLight, marginBottom: 20, lineHeight: 18 }}>
+              Araç tipiniz ve güzergahınızı girerek yük verenlerle eşleşin.
+            </Text>
+            <Text style={[styles.inputLabel, { color: theme.textLight, marginBottom: 6 }]}>NEREDEN</Text>
+            <TouchableOpacity
+              style={[styles.formInput, { justifyContent: 'center', backgroundColor: '#F1F5F9', marginBottom: 14 }]}
+              onPress={() => { setCityTarget('origin'); setAvailOrigin(''); setCityModalVisible(true); }}
+            >
+              <Text style={{ color: availOrigin ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
+                {availOrigin || 'Şehir Seçin'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.inputLabel, { color: theme.textLight, marginBottom: 6 }]}>NEREYE</Text>
+            <TouchableOpacity
+              style={[styles.formInput, { justifyContent: 'center', backgroundColor: '#F1F5F9', marginBottom: 14 }]}
+              onPress={() => { setCityTarget('destination'); setAvailDestination(''); setCityModalVisible(true); }}
+            >
+              <Text style={{ color: availDestination ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
+                {availDestination || 'Şehir Seçin'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.inputLabel, { color: theme.textLight, marginBottom: 6 }]}>MÜSAİT TARİH (YYYY-AA-GG)</Text>
+            <TextInput
+              style={[styles.formInput, { backgroundColor: '#F1F5F9', color: theme.text, marginBottom: 14 }]}
+              placeholder="2025-06-15"
+              placeholderTextColor={theme.textLight}
+              value={availDate}
+              onChangeText={setAvailDate}
+              keyboardType="numeric"
+            />
+            <Text style={[styles.inputLabel, { color: theme.textLight, marginBottom: 6 }]}>NOTLAR (İSTEĞE BAĞLI)</Text>
+            <TextInput
+              style={[styles.formInputLarge, { backgroundColor: '#F1F5F9', color: theme.text, marginBottom: 20 }]}
+              placeholder="Tonaj, özel şartlar vb."
+              placeholderTextColor={theme.textLight}
+              value={availNotes}
+              onChangeText={setAvailNotes}
+              multiline
+            />
+            <TouchableOpacity
+              style={[styles.postBtn, { backgroundColor: theme.accent }]}
+              onPress={handlePostAvailability}
+              disabled={availSaving}
+            >
+              {availSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.postBtnText}>İLAN OLUŞTUR</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
 
       <Modal visible={cityModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCityModalVisible(false)}>
         <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: Platform.OS === 'ios' ? 50 : 20 }}>
@@ -690,7 +944,7 @@ export default function Dashboard() {
              <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Şehir Seçin</Text>
           </View>
           <View style={{ padding: 20 }}>
-             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9', paddingHorizontal: 15, borderRadius: 12, height: 50 }}>
+             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 15, borderRadius: 12, height: 50 }}>
                <Ionicons name="search" size={20} color={theme.textLight} />
                <TextInput 
                  style={{ flex: 1, marginLeft: 10, color: theme.text, fontWeight: '600' }}
@@ -701,7 +955,24 @@ export default function Dashboard() {
                />
              </View>
           </View>
-          <FlatList 
+          {recentCities.length > 0 && !citySearch ? (
+            <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
+              <Text style={{ fontSize: 10, fontWeight: '900', color: theme.textLight, letterSpacing: 1, marginBottom: 8 }}>SON KULLANILANLAR</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {recentCities.map(city => (
+                  <TouchableOpacity
+                    key={city}
+                    onPress={() => handleCitySelect(city)}
+                    style={{ paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: theme.accent + '15', borderWidth: 1, borderColor: theme.accent + '30' }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>📍 {city}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ height: 1, backgroundColor: theme.border, marginTop: 14 }} />
+            </View>
+          ) : null}
+          <FlatList
             data={TURKISH_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()))}
             keyExtractor={item => item}
             keyboardShouldPersistTaps="handled"
@@ -739,6 +1010,19 @@ const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row', gap: 10 },
   searchInputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 13, fontWeight: '600' },
+  filterChipScroll: { marginTop: 8 },
+  filterChipRow: { flexDirection: 'row', gap: 8, paddingBottom: 2 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.06)' },
+  filterChipIcon: { fontSize: 13 },
+  filterChipText: { fontSize: 11, fontWeight: '800' },
+  sortRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.06)' },
+  sortChipIcon: { fontSize: 12 },
+  sortChipText: { fontSize: 10, fontWeight: '800' },
+  draftBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', borderRadius: 10, padding: 10, marginBottom: 14 },
+  draftBannerText: { fontSize: 12, fontWeight: '700', color: '#92400E', flex: 1 },
+  matchBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#FDE68A' },
+  matchBannerText: { flex: 1, fontSize: 12, fontWeight: '800', color: '#92400E' },
   listContent: { paddingTop: 30, paddingBottom: 100 },
   specCard: { padding: 20, borderRadius: Radius.xl, marginHorizontal: 20, marginBottom: 20, borderWidth: 1, ...Shadows.medium },
   specHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
@@ -784,7 +1068,8 @@ const styles = StyleSheet.create({
   formInput: { height: 48, borderRadius: 10, paddingHorizontal: 15, fontSize: 14, fontWeight: '600' },
   formInputLarge: { height: 100, borderRadius: 10, padding: 15, fontSize: 14, fontWeight: '600', textAlignVertical: 'top' },
   vehicleTypeSelector: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  vTypeBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.05)' },
+  vTypeBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.05)', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  vTypeBtnIcon: { fontSize: 14 },
   vTypeBtnText: { fontSize: 11, fontWeight: '800' },
   postBtn: { height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 15, ...Shadows.medium },
   postBtnText: { color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 1 },

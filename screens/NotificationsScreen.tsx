@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -6,25 +6,40 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing, Radius, Shadows } from '../constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const NOTIF_SETTINGS_KEY = '@notif_settings';
+
+const DEFAULT_SETTINGS = {
+  newJobs: true,
+  updates: false,
+  offers: true,
+};
 
 export default function NotificationsScreen({ navigation }: any) {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [settings, setSettings] = useState({
-    newJobs: true,
-    updates: false,
-    offers: true,
-  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIF_SETTINGS_KEY).then(raw => {
+      if (raw) setSettings(JSON.parse(raw));
+    });
+  }, []);
 
   const toggleSetting = (key: keyof typeof settings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    setSettings(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      AsyncStorage.setItem(NOTIF_SETTINGS_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   const renderSwitchItem = (label: string, value: boolean, onValueChange: () => void, icon: string, isLast = false) => (
     <View style={[styles.settingRow, isLast && { borderBottomWidth: 0, paddingBottom: 0 }]}>
       <View style={styles.settingRowLeft}>
-        <View style={[styles.iconBox, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+        <View style={[styles.iconBox, { backgroundColor: 'rgba(0,0,0,0.03)' }]}>
           <Ionicons name={icon as any} size={18} color={theme.accent} />
         </View>
         <Text style={[styles.settingLabel, { color: theme.text }]}>{label}</Text>
@@ -45,7 +60,7 @@ export default function NotificationsScreen({ navigation }: any) {
       {/* Immersive Mission Control Header */}
       <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
         <LinearGradient
-          colors={isDarkMode ? ['#0F172A', '#020617'] : [theme.primary, '#f35d18']}
+          colors={[theme.primary, '#f35d18']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerContent}>

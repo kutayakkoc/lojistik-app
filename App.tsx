@@ -5,17 +5,22 @@ import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 import MainNavigator from './navigation/MainNavigator';
 import Auth from './screens/Auth';
 
-function ThemedAppContent({ session }: { session: any }) {
-  const { isDarkMode, theme } = useTheme();
+function ThemedAppContent({ session, recoveryState }: { session: any, recoveryState: any }) {
+  const { theme } = useTheme();
 
   return (
     <>
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
       <NavigationContainer>
-        {session && session.user ? <MainNavigator /> : <Auth />}
+        {session && session.user ? (
+          <MainNavigator />
+        ) : (
+          <Auth recoveryState={recoveryState} />
+        )}
       </NavigationContainer>
     </>
   );
@@ -24,8 +29,10 @@ function ThemedAppContent({ session }: { session: any }) {
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryState, setRecoveryState] = useState<any>(null);
 
   useEffect(() => {
+    // Sesyona bak
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -35,7 +42,25 @@ export default function App() {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    // Deep Link Dinle
+    const handleDeepLink = (event: { url: string }) => {
+      let data = Linking.parse(event.url);
+      if (data.path === 'reset-password') {
+         setRecoveryState(data);
+      }
+    };
+
+    const sub = Linking.addEventListener('url', handleDeepLink);
+
+    // Uygulama kapalıyken link ile açılırsa
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      sub.remove();
+    };
   }, []);
 
   if (loading) {
@@ -49,7 +74,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ThemedAppContent session={session} />
+        <ThemedAppContent session={session} recoveryState={recoveryState} />
       </ThemeProvider>
     </SafeAreaProvider>
   );
