@@ -5,19 +5,26 @@
     "scheme": "akkoclojistik",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/512x512 akkoc tahta.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/512x512 akkoc tahta.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F172A"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.akkoc.lojistik.tahta",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "tr",
+        "CFBundleLocalizations": [
+          "tr"
+        ],
+        "NSCameraUsageDescription": "Profil fotoğrafı ve belge yüklemek için kameranıza erişim gereklidir.",
+        "NSPhotoLibraryUsageDescription": "Dosya ve fotoğraf seçimi için kütüphanenize erişim gereklidir.",
+        "NSLocationWhenInUseUsageDescription": "İlanların mesafesini hesaplamak ve size en yakın ilanları göstermek için konumunuza erişim gereklidir."
       }
     },
     "android": {
@@ -25,12 +32,12 @@
       "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "foregroundImage": "./assets/images/512x512 akkoc tahta.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/512x512 akkoc tahta.png"
     },
     "plugins": [
       "expo-notifications"

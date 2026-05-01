@@ -548,7 +548,7 @@ export default function Dashboard() {
           </View>
           <View style={styles.headerRight}>
             <Image 
-              source={require('../assets/images/akkoc_loj_logo.png')} 
+              source={require('../assets/images/512x512 akkoc tahta.png')} 
               style={styles.headerLogo} 
               resizeMode="contain" 
             />
@@ -996,8 +996,8 @@ const styles = StyleSheet.create({
   greetingHeader: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' },
   userNameHeader: { color: '#fff', fontSize: 20, fontWeight: '900' },
   headerLogo: {
-    width: 100,
-    height: 30,
+    width: 42,
+    height: 42,
     opacity: 0.9,
   },
   statsStrip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: 12, borderRadius: 16 },

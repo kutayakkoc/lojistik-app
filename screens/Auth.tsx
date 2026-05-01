@@ -166,7 +166,7 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
           
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../assets/images/akkoc_loj_logo.png')} 
+              source={require('../assets/images/512x512 akkoc tahta.png')} 
               style={styles.logoImage} 
               resizeMode="contain" 
             />
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, padding: Spacing.xl, paddingBottom: 60 },
   logoContainer: { alignItems: 'center', marginBottom: 40, marginTop: Platform.OS === 'ios' ? 80 : 60 },
-  logoImage: { width: 260, height: 70 },
+  logoImage: { width: 120, height: 120 },
   card: { borderRadius: 36, padding: Spacing.xl, ...Shadows.large, marginHorizontal: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   cardHeader: { marginBottom: 30 },
   title: { fontSize: 28, fontWeight: '900', marginBottom: 8, letterSpacing: -0.8 },
