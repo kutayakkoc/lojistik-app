@@ -10,6 +10,39 @@ index 0000000..0a3280e
 +	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
 +	<classpathentry kind="output" path="bin/default"/>
 +</classpath>
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/checksums/checksums.lock b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/checksums/checksums.lock
+new file mode 100644
+index 0000000..fa57a50
+Binary files /dev/null and b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/checksums/checksums.lock differ
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/dependencies-accessors/gc.properties b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/dependencies-accessors/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileChanges/last-build.bin b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileChanges/last-build.bin
+new file mode 100644
+index 0000000..f76dd23
+Binary files /dev/null and b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileChanges/last-build.bin differ
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileHashes/fileHashes.lock b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileHashes/fileHashes.lock
+new file mode 100644
+index 0000000..a36a624
+Binary files /dev/null and b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/fileHashes/fileHashes.lock differ
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/gc.properties b/node_modules/@react-native-async-storage/async-storage/android/.gradle/8.9/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..72f6b12
+Binary files /dev/null and b/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/cache.properties b/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..97cabaf
+--- /dev/null
++++ b/node_modules/@react-native-async-storage/async-storage/android/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Thu Apr 16 12:59:08 TRT 2026
++gradle.version=8.9
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/.gradle/vcs-1/gc.properties b/node_modules/@react-native-async-storage/async-storage/android/.gradle/vcs-1/gc.properties
+new file mode 100644
+index 0000000..e69de29
 diff --git a/node_modules/@react-native-async-storage/async-storage/android/.project b/node_modules/@react-native-async-storage/async-storage/android/.project
 new file mode 100644
 index 0000000..1beb18f
@@ -59,7 +92,7 @@ index 0000000..68c9fab
 +connection.project.dir=../../../../android
 +eclipse.preferences.version=1
 diff --git a/node_modules/@react-native-async-storage/async-storage/android/build.gradle b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
-index 4560dc7..1ef7b26 100644
+index 4560dc7..8f2b67e 100644
 --- a/node_modules/@react-native-async-storage/async-storage/android/build.gradle
 +++ b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
 @@ -1,7 +1,3 @@
@@ -70,7 +103,7 @@ index 4560dc7..1ef7b26 100644
  buildscript {
      apply from: "config.gradle"
      def kotlinVersion = ext.AsyncStorageConfig.kotlinVersion
-@@ -12,113 +8,49 @@ buildscript {
+@@ -12,113 +8,52 @@ buildscript {
          google()
      }
      dependencies {
@@ -139,6 +172,9 @@ index 4560dc7..1ef7b26 100644
 -    lintOptions {
 -        abortOnError false
 +        buildConfigField "Long", "EX_AsyncStorage_db_size", "6L"
++        buildConfigField "boolean", "AsyncStorage_useDedicatedExecutor", "false"
++        buildConfigField "boolean", "AsyncStorage_useNextStorage", "false"
++        buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false"
      }
  
 -    if (useNextStorage) {
@@ -717,7 +753,7 @@ index 7e180bd..3c21b61 100644
    
 \ No newline at end of file
 diff --git a/node_modules/@react-native-async-storage/async-storage/android/src/main/java/com/reactnativecommunity/asyncstorage/AsyncStorageModule.java b/node_modules/@react-native-async-storage/async-storage/android/src/main/java/com/reactnativecommunity/asyncstorage/AsyncStorageModule.java
-index a66e802..af05f25 100644
+index a66e802..0c1efb0 100644
 --- a/node_modules/@react-native-async-storage/async-storage/android/src/main/java/com/reactnativecommunity/asyncstorage/AsyncStorageModule.java
 +++ b/node_modules/@react-native-async-storage/async-storage/android/src/main/java/com/reactnativecommunity/asyncstorage/AsyncStorageModule.java
 @@ -31,7 +31,8 @@ import java.util.concurrent.Executor;
@@ -738,54 +774,81 @@ index a66e802..af05f25 100644
  
      // The migration MUST run before the AsyncStorage database is created for the first time.
      AsyncStorageExpoMigration.migrate(reactContext);
-@@ -97,7 +99,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
-       return;
-     }
- 
--    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
-+    new GuardedAsyncTask<Void, Void>(mReactContext) {
-       @Override
-       protected void doInBackgroundGuarded(Void... params) {
-         if (!ensureDatabase()) {
-@@ -171,7 +173,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
-       return;
-     }
- 
--    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
-+    new GuardedAsyncTask<Void, Void>(mReactContext) {
-       @Override
-       protected void doInBackgroundGuarded(Void... params) {
-         if (!ensureDatabase()) {
-@@ -237,7 +239,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
-       return;
-     }
- 
--    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
-+    new GuardedAsyncTask<Void, Void>(mReactContext) {
-       @Override
-       protected void doInBackgroundGuarded(Void... params) {
-         if (!ensureDatabase()) {
-@@ -285,7 +287,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+@@ -90,14 +92,13 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * (key, null) for the keys that haven't been found.
+    */
    @ReactMethod
-   @Override
+-  @Override
+   public void multiGet(final ReadableArray keys, final Callback callback) {
+     if (keys == null) {
+       callback.invoke(AsyncStorageErrorUtil.getInvalidKeyError(null), null);
+       return;
+     }
+ 
+-    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
++    new GuardedAsyncTask<Void, Void>(mReactContext) {
+       @Override
+       protected void doInBackgroundGuarded(Void... params) {
+         if (!ensureDatabase()) {
+@@ -164,14 +165,13 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * The insertion will replace conflicting (key, value) pairs.
+    */
+   @ReactMethod
+-  @Override
+   public void multiSet(final ReadableArray keyValueArray, final Callback callback) {
+     if (keyValueArray.size() == 0) {
+       callback.invoke();
+       return;
+     }
+ 
+-    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
++    new GuardedAsyncTask<Void, Void>(mReactContext) {
+       @Override
+       protected void doInBackgroundGuarded(Void... params) {
+         if (!ensureDatabase()) {
+@@ -230,14 +230,13 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * Removes all rows of the keys given.
+    */
+   @ReactMethod
+-  @Override
+   public void multiRemove(final ReadableArray keys, final Callback callback) {
+     if (keys.size() == 0) {
+       callback.invoke();
+       return;
+     }
+ 
+-    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
++    new GuardedAsyncTask<Void, Void>(mReactContext) {
+       @Override
+       protected void doInBackgroundGuarded(Void... params) {
+         if (!ensureDatabase()) {
+@@ -283,9 +282,8 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * of the given keys, if they exist.
+    */
+   @ReactMethod
+-  @Override
    public void multiMerge(final ReadableArray keyValueArray, final Callback callback) {
 -    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
 +    new GuardedAsyncTask<Void, Void>(mReactContext) {
        @Override
        protected void doInBackgroundGuarded(Void... params) {
          if (!ensureDatabase()) {
-@@ -348,7 +350,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+@@ -346,9 +344,8 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * Clears the database.
+    */
    @ReactMethod
-   @Override
+-  @Override
    public void clear(final Callback callback) {
 -    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
 +    new GuardedAsyncTask<Void, Void>(mReactContext) {
        @Override
        protected void doInBackgroundGuarded(Void... params) {
          if (!mReactDatabaseSupplier.ensureDatabase()) {
-@@ -372,7 +374,7 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+@@ -370,9 +367,8 @@ public final class AsyncStorageModule extends NativeAsyncStorageModuleSpec {
+    * Returns an array with all keys from the database.
+    */
    @ReactMethod
-   @Override
+-  @Override
    public void getAllKeys(final Callback callback) {
 -    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
 +    new GuardedAsyncTask<Void, Void>(mReactContext) {
