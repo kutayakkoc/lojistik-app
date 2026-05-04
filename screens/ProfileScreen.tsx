@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,15 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Switch,
-  Dimensions,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { Colors, Spacing, Shadows, Radius } from '../constants/Theme';
+import { Shadows, Radius } from '../constants/Theme';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-
-const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
@@ -146,7 +142,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100, paddingTop: 20 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40, paddingTop: 20 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
@@ -289,7 +285,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <View style={styles.versionFooter}>
-             <Text style={[styles.versionText, { color: theme.textLight }]}>Versiyon 1.0.0 (RC)</Text>
+             <Text style={[styles.versionText, { color: theme.textLight }]}>Versiyon 1.0.1</Text>
              <Text style={[styles.versionText, { color: theme.textLight, marginTop: 4 }]}>Akkoç Lojistik Dijital Altyapı</Text>
           </View>
         </View>
@@ -330,8 +326,8 @@ const styles = StyleSheet.create({
   consoleItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)' },
   consoleItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   consoleText: { fontSize: 14, fontWeight: '600' },
-  logoutBtn: { height: 54, borderRadius: 16, borderWidth: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 10, alignSelf: 'center', width: '70%', marginBottom: 50 },
+  logoutBtn: { height: 54, borderRadius: 16, borderWidth: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 10, alignSelf: 'center', width: '70%', marginBottom: 30 },
   logoutBtnText: { fontSize: 12, fontWeight: '900', letterSpacing: 1 },
-  versionFooter: { marginTop: 40, alignItems: 'center', marginBottom: 60, opacity: 0.5 },
+  versionFooter: { marginTop: 20, alignItems: 'center', marginBottom: 20, opacity: 0.5 },
   versionText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
 });

@@ -77,21 +77,15 @@ export default function SupportScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <View style={styles.brandBox}>
-            <View style={[
-              styles.logoContainer, 
-              { 
-                backgroundColor: '#0F172A',
-                borderColor: theme.border,
-              }
-            ]}>
-              <Image 
-                source={require('../assets/images/512x512 akkoc tahta.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+            <View style={styles.brandBox}>
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../assets/images/new_logo_horizontal.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
             </View>
-          </View>
 
           <Text style={[styles.sectionMainTitle, { color: theme.textLight }]}>BİZE ULAŞIN</Text>
           
@@ -121,8 +115,8 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1, marginTop: -15 },
   content: { padding: 20 },
   brandBox: { alignItems: 'center', marginBottom: 30, marginTop: 10 },
-  logoContainer: { padding: 15, borderRadius: Radius.lg, borderWidth: 1, ...Shadows.sm },
-  logo: { width: 80, height: 80 },
+  logoContainer: { paddingHorizontal: 30, paddingVertical: 15, borderRadius: Radius.lg, backgroundColor: '#0F172A', ...Shadows.sm },
+  logo: { width: 200, height: 70 },
   sectionMainTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginBottom: 15, marginLeft: 4, opacity: 0.8 },
   specCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: Radius.xl, marginBottom: 15, borderWidth: 1, ...Shadows.medium },
   iconContainer: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 15, ...Shadows.sm },

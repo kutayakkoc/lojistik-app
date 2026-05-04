@@ -4,6 +4,7 @@
     "slug": "lojistik-app",
     "scheme": "akkoclojistik",
     "version": "1.0.1",
+    "description": "Akkoç Lojistik: Yük sahipleri ile şoförleri buluşturan kurumsal lojistik platformu. İlan yayınlayın, başvurun, anında iletişim kurun.",
     "orientation": "portrait",
     "icon": "./assets/images/512x512 akkoc tahta.png",
     "userInterfaceStyle": "light",
@@ -15,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.akkoc.lojistik.tahta",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "tr",
@@ -29,11 +30,16 @@
     },
     "android": {
       "package": "com.akkoc.lojistik.tahta",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/images/512x512 akkoc tahta.png"
       },
+      "permissions": [
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -46,6 +52,6 @@
       "eas": {
         "projectId": "6b548d62-9a0c-4c0c-a36e-e03739835fed"
       }
-    },
+    }
   }
 }

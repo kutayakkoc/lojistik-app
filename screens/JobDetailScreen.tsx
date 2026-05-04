@@ -1,14 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Dimensions, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Shadows, Radius } from '../constants/Theme';
+import { Shadows, Radius } from '../constants/Theme';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sendPushNotification } from '../lib/notifications';
+import { openPhoneCall, openWhatsApp } from '../lib/utils';
 import * as Haptics from 'expo-haptics';
 
 export default function JobDetailScreen({ route, navigation }: any) {
@@ -60,7 +61,7 @@ export default function JobDetailScreen({ route, navigation }: any) {
 
   const fetchFreshJobData = async () => {
     try {
-      const { data, error } = await supabase.from('jobs').select('*').eq('id', item.id).single();
+      const { data } = await supabase.from('jobs').select('*').eq('id', item.id).single();
       if (data) {
         setJobData(data);
         if ((data.status === 'ASSIGNED' || data.status === 'COMPLETED') && data.assigned_driver_id) {
@@ -78,7 +79,9 @@ export default function JobDetailScreen({ route, navigation }: any) {
     try {
       const { data } = await supabase.from('profiles').select('phone').eq('id', item.shipper_id).single();
       if (data) setShipperPhone(data.phone);
-    } catch (e) { /* silent fetch */ }
+    } catch (e) {
+      console.error('fetchShipperPhone:', e);
+    }
   };
 
   const checkIfApplied = async () => {
@@ -96,7 +99,9 @@ export default function JobDetailScreen({ route, navigation }: any) {
         .maybeSingle();
 
       setHasApplied(!!data);
-    } catch (e) {}
+    } catch (e) {
+      console.error('checkIfApplied:', e);
+    }
   };
 
   const fetchRequests = async () => {
@@ -109,7 +114,9 @@ export default function JobDetailScreen({ route, navigation }: any) {
 
       if (error) throw error;
       setRequests(data || []);
-    } catch (error: any) {}
+    } catch (error: any) {
+      console.error('fetchRequests:', error);
+    }
   };
 
   const fetchAssignedDriver = async (driverId: string) => {
@@ -117,7 +124,9 @@ export default function JobDetailScreen({ route, navigation }: any) {
     try {
       const { data } = await supabase.from('profiles').select('full_name, phone').eq('id', driverId).maybeSingle();
       if (data) setAssignedDriverInfo(data);
-    } catch (e) {}
+    } catch (e) {
+      console.error('fetchAssignedDriver:', e);
+    }
   };
 
   const handleApplyJob = async () => {
@@ -158,17 +167,14 @@ export default function JobDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const handleWhatsApp = async () => {
+  const handleWhatsApp = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!shipperPhone) {
       Alert.alert('Hata', 'Operatör telefonu şifrelenmiş veya yok.');
       return;
     }
     const message = `Merhaba, ${item.origin} - ${item.destination} koordinatlı görev için Akkoç Sisteminden ulaşıyorum.`;
-    const url = `https://wa.me/${shipperPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-    
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) Linking.openURL(url);
+    openWhatsApp(shipperPhone, message);
   };
 
   const handleAcceptRequest = async (requestId: string, driverId: string) => {
@@ -241,7 +247,7 @@ export default function JobDetailScreen({ route, navigation }: any) {
                 if (jobData.assigned_driver_id) {
                   const { data: driverProfile } = await supabase.from('profiles').select('push_token').eq('id', jobData.assigned_driver_id).single();
                   if (driverProfile?.push_token) {
-                     sendPushNotification(
+                     await sendPushNotification(
                       driverProfile.push_token,
                       '🏁 Görev Bitti',
                       `İşvereniniz ${item.origin} -> ${item.destination} teslimatını onayladı.`,
@@ -350,7 +356,7 @@ export default function JobDetailScreen({ route, navigation }: any) {
              </TouchableOpacity>
            )}
            {isAccepted && (
-              <TouchableOpacity style={styles.actionCallBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(`tel:${req.driver?.phone}`); }}>
+              <TouchableOpacity style={styles.actionCallBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openPhoneCall(req.driver?.phone); }}>
                  <Ionicons name="call" size={20} color="#10B981" />
               </TouchableOpacity>
            )}
@@ -502,7 +508,7 @@ export default function JobDetailScreen({ route, navigation }: any) {
                          <Text style={[styles.pilotFullName, { color: theme.text }]}>{assignedDriverInfo.full_name}</Text>
                          <Text style={[styles.pilotPhoneNum, { color: theme.textLight }]}>{assignedDriverInfo.phone}</Text>
                       </View>
-                      <TouchableOpacity style={styles.pilotDialBtn} onPress={() => Linking.openURL(`tel:${assignedDriverInfo.phone}`)}>
+                      <TouchableOpacity style={styles.pilotDialBtn} onPress={() => openPhoneCall(assignedDriverInfo.phone)}>
                          <Ionicons name="call" size={22} color="#fff" />
                       </TouchableOpacity>
                    </View>

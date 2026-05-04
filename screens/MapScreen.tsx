@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,12 +47,6 @@ export default function MapScreen() {
     if (!originCounts[j.origin]) originCounts[j.origin] = [];
     originCounts[j.origin].push(j);
   });
-
-  const regions = Object.entries(REGION_CITIES).map(([region, cities]) => {
-    const regionJobs = cities.flatMap(city => originCounts[city] || []);
-    const activeCities = cities.filter(c => (originCounts[c] || []).length > 0);
-    return { region, cities, regionJobs, activeCities };
-  }).filter(r => r.regionJobs.length > 0 || !selectedRegion);
 
   const displayCities = selectedRegion
     ? (REGION_CITIES[selectedRegion] || []).filter(c => (originCounts[c] || []).length > 0)

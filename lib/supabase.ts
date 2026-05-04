@@ -2,7 +2,8 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase API ayarlarından kopyaladığın değerleri buraya yapıştır
+// Supabase anon key kasıtlı olarak public'tir — Row Level Security (RLS)
+// politikaları yetkisiz erişimi engeller. Service role key asla istemciye koyulmamalıdır.
 const supabaseUrl = 'https://lsjxyzglrgqvwdjjrfcs.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzanh5emdscmdxdndkampyZmNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjkwOTgsImV4cCI6MjA4ODcwNTA5OH0.DLt5NOjfWHvhwLNatML-DWDDMz0LxB-7jRUXZvSuqmo';
 

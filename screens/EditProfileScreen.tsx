@@ -64,7 +64,9 @@ export default function EditProfileScreen() {
   const formatPhone = (text: string) => {
     let digits = text.replace(/\D/g, '');
     if (digits.length === 0) return '';
-    if (digits.length > 0 && digits.charAt(0) !== '0') digits = '0' + digits;
+    
+    // Her zaman 0 ile başlamasını sağla
+    if (digits.charAt(0) !== '0') digits = '0' + digits;
     
     let formatted = '0';
     if (digits.length > 1) {
@@ -79,7 +81,7 @@ export default function EditProfileScreen() {
     if (digits.length > 9) {
       formatted += ' ' + digits.substring(9, 11);
     }
-    return formatted.trim().substring(0, 15);
+    return formatted.substring(0, 15);
   };
 
   const handleSaveProfile = async () => {
@@ -92,7 +94,7 @@ export default function EditProfileScreen() {
         .from('profiles')
         .update({
           full_name: fullName,
-          phone: phone.replace(/\s/g, '')
+          phone: phone // Boşlukları silmeden kaydet
         })
         .eq('id', session.user.id);
 

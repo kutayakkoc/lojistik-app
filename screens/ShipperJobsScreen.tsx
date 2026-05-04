@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Platform, Alert, Linking, ScrollView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import { openPhoneCall, openWhatsApp } from '../lib/utils';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Shadows, Radius } from '../constants/Theme';
@@ -83,17 +84,12 @@ export default function ShipperJobsScreen() {
   };
 
   const handleDriverWhatsApp = (phone: string, driver: any) => {
-    const clean = phone.replace(/\D/g, '').replace(/^0/, '90');
     const msg = `Merhaba ${driver.full_name}, boş araç ilanınızı gördüm. ${driver.origin} - ${driver.destination} güzergahında yük teklifim var, görüşebilir miyiz?`;
-    Linking.openURL(`whatsapp://send?phone=${clean}&text=${encodeURIComponent(msg)}`).catch(() =>
-      Alert.alert('Hata', 'WhatsApp açılamadı.')
-    );
+    openWhatsApp(phone, msg);
   };
 
   const handleDriverCall = (phone: string) => {
-    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() =>
-      Alert.alert('Hata', 'Arama başlatılamadı.')
-    );
+    openPhoneCall(phone);
   };
 
   const renderAvailableDriverCard = ({ item }: { item: any }) => {

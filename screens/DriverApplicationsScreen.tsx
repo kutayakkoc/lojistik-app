@@ -1,16 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, Linking, Dimensions, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { openPhoneCall, openWhatsApp } from '../lib/utils';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Shadows, Radius } from '../constants/Theme';
+import { Shadows, Radius } from '../constants/Theme';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
-
-const { width } = Dimensions.get('window');
 
 export default function DriverApplicationsScreen() {
   const { theme } = useTheme();
@@ -71,21 +70,26 @@ export default function DriverApplicationsScreen() {
       if (error) throw error;
       setApplications(data || []);
     } catch (error: any) {
-      // fetchMyApplications Catch
+      console.error('fetchMyApplications:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchMyAvailabilities = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
-    const { data } = await supabase
-      .from('driver_availabilities')
-      .select('id, origin, destination, available_date, vehicle_type, notes')
-      .eq('driver_id', session.user.id)
-      .order('available_date', { ascending: true });
-    setMyAvailabilities(data || []);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data, error } = await supabase
+        .from('driver_availabilities')
+        .select('id, origin, destination, available_date, vehicle_type, notes')
+        .eq('driver_id', session.user.id)
+        .order('available_date', { ascending: true });
+      if (error) throw error;
+      setMyAvailabilities(data || []);
+    } catch (e) {
+      console.error('fetchMyAvailabilities:', e);
+    }
   };
 
   const handleDeleteAvailability = async (id: string) => {
@@ -103,28 +107,12 @@ export default function DriverApplicationsScreen() {
   };
 
   const handleWhatsAppContact = (job: any) => {
-    const phone = job.profiles.phone;
     const message = `Merhaba, ${job.origin} - ${job.destination} sevkiyatı (#${job.id.substring(0, 8)}) başvurum hakkında görüşmek istiyorum.`;
-    const url = `whatsapp://send?phone=90${phone}&text=${encodeURIComponent(message)}`;
-    
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('Hata', 'WhatsApp yüklü değil veya açılamadı.');
-      }
-    });
+    openWhatsApp(job.profiles?.phone, message);
   };
 
   const handlePhoneCall = (phone: string) => {
-    const url = `tel:${phone}`;
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('Hata', 'Arama özelliği bu cihazda kullanılamıyor.');
-      }
-    });
+    openPhoneCall(phone);
   };
 
   const formatMissionDate = (dateStr: string) => {
@@ -195,7 +183,6 @@ export default function DriverApplicationsScreen() {
     const shipper = job.profiles;
     const isAccepted = item.status === 'ACCEPTED';
     const isRejected = item.status === 'REJECTED';
-    const isPending = item.status === 'PENDING';
 
     if (viewMode === 'list') {
       const statusConfig = isAccepted 

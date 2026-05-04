@@ -38,28 +38,20 @@ export async function registerForPushNotificationsAsync() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('Bildirim izni alınamadı!');
       return null;
     }
-    
+
     try {
-      const projectId = 
-        Constants?.expoConfig?.extra?.eas?.projectId ?? 
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ??
         Constants?.easConfig?.projectId;
-        
-      if (!projectId) {
-        console.log('Project ID bulunamadı, Expo Push Token alınamayabilir.');
-      }
 
       token = (await Notifications.getExpoPushTokenAsync({
         projectId: projectId,
       })).data;
-      console.log('Push Token:', token);
     } catch (e) {
-      console.log('Push Token alma hatası:', e);
+      console.error('Push token alınamadı:', e);
     }
-  } else {
-    console.log('Uyarı: Fiziksel bir cihaz kullanmalısınız (Simülatörde bildirim çalışmaz).');
   }
 
   return token;

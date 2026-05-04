@@ -45,7 +45,7 @@ export default function App() {
     // Deep Link Dinle
     const handleDeepLink = (event: { url: string }) => {
       let data = Linking.parse(event.url);
-      if (data.path === 'reset-password') {
+      if (data.path === 'reset-password' || data.path === 'auth/callback') {
          setRecoveryState(data);
       }
     };

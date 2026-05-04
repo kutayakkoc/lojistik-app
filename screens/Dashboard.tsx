@@ -27,26 +27,26 @@ const TURKISH_CITIES = [
 ];
 
 const getNearbyDates = () => {
-    const dates = [];
-    const today = new Date();
-    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-    const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  const dates = [];
+  const today = new Date();
+  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
-    for (let i = 0; i < 14; i++) {
-        const d = new Date();
-        d.setDate(today.getDate() + i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        dates.push({
-            id: `${yyyy}-${mm}-${dd}`,
-            fullDate: `${yyyy}-${mm}-${dd}`,
-            dayName: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : dayNames[d.getDay()],
-            dayNumber: dd,
-            monthName: monthNames[d.getMonth()]
-        });
-    }
-    return dates;
+  for (let i = 0; i < 14; i++) {
+    const d = new Date();
+    d.setDate(today.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    dates.push({
+      id: `${yyyy}-${mm}-${dd}`,
+      fullDate: `${yyyy}-${mm}-${dd}`,
+      dayName: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : dayNames[d.getDay()],
+      dayNumber: dd,
+      monthName: monthNames[d.getMonth()]
+    });
+  }
+  return dates;
 };
 
 export default function Dashboard() {
@@ -62,7 +62,7 @@ export default function Dashboard() {
   const [destination, setDestination] = useState('');
   const [cargoDetails, setCargoDetails] = useState('');
   const [pickupDate, setPickupDate] = useState(''); // Text based date
-  const [requiredVehicleType, setRequiredVehicleType] = useState('TIR'); 
+  const [requiredVehicleType, setRequiredVehicleType] = useState('TIR');
   const [unloadingDate, setUnloadingDate] = useState(''); // Text based date
   const [price, setPrice] = useState(''); // Budget/Price field
   const [isQuote, setIsQuote] = useState(false); // Teklif Usulü toggle
@@ -118,7 +118,7 @@ export default function Dashboard() {
     fetchSessionAndProfile();
     AsyncStorage.getItem('@recent_cities').then(raw => {
       if (raw) setRecentCities(JSON.parse(raw));
-    });
+    }).catch(e => console.error('recent_cities load:', e));
     AsyncStorage.getItem('@job_draft').then(raw => {
       if (!raw) return;
       const d = JSON.parse(raw);
@@ -132,7 +132,7 @@ export default function Dashboard() {
         setIsQuote(d.isQuote || false);
         setDraftLoaded(true);
       }
-    });
+    }).catch(e => console.error('job_draft load:', e));
   }, []);
 
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function Dashboard() {
         setLoading(false);
         return;
       }
-      
+
       setRole(profileData.role);
       setUserName(profileData.full_name || '');
 
@@ -226,7 +226,7 @@ export default function Dashboard() {
         .from('job_requests')
         .select('job_id')
         .eq('driver_id', uId);
-      
+
       if (data) {
         setAppliedJobIds(data.map(r => r.job_id));
       }
@@ -257,7 +257,7 @@ export default function Dashboard() {
         .from('jobs')
         .select('*, profiles!jobs_shipper_id_fkey(full_name), job_requests(count)')
         .eq('status', 'OPEN')
-        .gte('pickup_date', today) 
+        .gte('pickup_date', today)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -282,7 +282,7 @@ export default function Dashboard() {
       Alert.alert('Uyarı', 'Lütfen rotayı, detayları, yükleme tarihini ve fiyatı (veya Teklif Usulü) doldurun.');
       return;
     }
-    
+
     try {
       setLoading(true);
       const { error } = await supabase.from('jobs').insert({
@@ -406,14 +406,14 @@ export default function Dashboard() {
     const isMatchingVehicle = role === 'DRIVER' && item.required_vehicle_type && driverVehicle && item.required_vehicle_type === driverVehicle.vehicle_type;
 
     if (viewMode === 'list') {
-      const config = isApplied 
+      const config = isApplied
         ? { color: '#22C55E', label: 'BAŞVURU YAPILDI', bg: 'rgba(34, 197, 94, 0.1)' }
         : { color: '#3B82F6', label: 'AÇIK İLAN', bg: 'rgba(59, 130, 246, 0.1)' };
 
       return (
         <TouchableOpacity
           style={[
-            styles.listPremiumItem, 
+            styles.listPremiumItem,
             { backgroundColor: theme.surface, borderColor: theme.border }
           ]}
           onPress={() => navigation.navigate('HomeTab', { screen: 'JobDetail', params: { item, role } })}
@@ -425,9 +425,9 @@ export default function Dashboard() {
               <View style={styles.listPremiumRouteWrap}>
                 <Text style={[styles.listPremiumCity, { color: theme.text }]} numberOfLines={1}>{item.origin.toUpperCase()}</Text>
                 <View style={styles.listRoutePath}>
-                   <View style={[styles.listPathDash, { borderColor: theme.border }]} />
-                   <FontAwesome5 name="truck" size={10} color={config.color} style={{ marginHorizontal: 6 }} />
-                   <View style={[styles.listPathDash, { borderColor: theme.border }]} />
+                  <View style={[styles.listPathDash, { borderColor: theme.border }]} />
+                  <FontAwesome5 name="truck" size={10} color={config.color} style={{ marginHorizontal: 6 }} />
+                  <View style={[styles.listPathDash, { borderColor: theme.border }]} />
                 </View>
                 <Text style={[styles.listPremiumCity, { color: theme.text }]} numberOfLines={1}>{item.destination.toUpperCase()}</Text>
               </View>
@@ -435,30 +435,30 @@ export default function Dashboard() {
             </View>
 
             <View style={styles.listPremiumMetaRow}>
-               <View style={styles.listPremiumSpec}>
-                 <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 0 }]}>TARİH:</Text>
-                 <Text style={[styles.listPremiumSpecText, { color: theme.text }]}>{formatTurkishDate(item.pickup_date)}</Text>
-               </View>
-               <View style={[styles.listPremiumDivider, { backgroundColor: theme.border }]} />
-               <View style={styles.listPremiumSpec}>
-                 <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 0 }]}>FİYAT:</Text>
-                 <Text style={[styles.listPremiumSpecText, { color: theme.accent }]}>{item.price ? `${item.price.toLocaleString('tr-TR')} ₺ + KDV` : 'TEKLİF'}</Text>
-               </View>
-               {isMatchingVehicle && !isApplied && (
-                 <>
-                   <View style={[styles.listPremiumDivider, { backgroundColor: theme.border }]} />
-                   <View style={styles.listPremiumSpec}>
-                     <Text style={[styles.telemetryLabel, { color: '#F38118' }]}>UYGUN ARAÇ</Text>
-                   </View>
-                 </>
-               )}
+              <View style={styles.listPremiumSpec}>
+                <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 0 }]}>TARİH:</Text>
+                <Text style={[styles.listPremiumSpecText, { color: theme.text }]}>{formatTurkishDate(item.pickup_date)}</Text>
+              </View>
+              <View style={[styles.listPremiumDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.listPremiumSpec}>
+                <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 0 }]}>FİYAT:</Text>
+                <Text style={[styles.listPremiumSpecText, { color: theme.accent }]}>{item.price ? `${item.price.toLocaleString('tr-TR')} ₺ + KDV` : 'TEKLİF'}</Text>
+              </View>
+              {isMatchingVehicle && !isApplied && (
+                <>
+                  <View style={[styles.listPremiumDivider, { backgroundColor: theme.border }]} />
+                  <View style={styles.listPremiumSpec}>
+                    <Text style={[styles.telemetryLabel, { color: '#F38118' }]}>UYGUN ARAÇ</Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </TouchableOpacity>
       );
     }
 
-    const config = isApplied 
+    const config = isApplied
       ? { color: '#22C55E', label: 'BAŞVURU YAPILDI', bg: 'rgba(34, 197, 94, 0.1)' }
       : { color: '#3B82F6', label: 'BAŞVURUYA AÇIK', bg: 'rgba(59, 130, 246, 0.1)' };
 
@@ -470,10 +470,10 @@ export default function Dashboard() {
       >
         <View style={styles.specHeader}>
           <View style={[styles.statusBadge, { backgroundColor: config.bg, borderWidth: 1, borderColor: config.color + '40' }]}>
-             <View style={[styles.pulseDot, { backgroundColor: config.color }]} />
-             <Text style={[styles.statusBadgeText, { color: config.color }]}>
-                {config.label}
-             </Text>
+            <View style={[styles.pulseDot, { backgroundColor: config.color }]} />
+            <Text style={[styles.statusBadgeText, { color: config.color }]}>
+              {config.label}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             {isMatchingVehicle && !isApplied && (
@@ -483,7 +483,7 @@ export default function Dashboard() {
               </View>
             )}
             <Text style={[styles.missionId, { color: theme.textLight }]}>
-               #{item.id.substring(0,6).toUpperCase()}
+              #{item.id.substring(0, 6).toUpperCase()}
             </Text>
           </View>
         </View>
@@ -493,11 +493,11 @@ export default function Dashboard() {
             <Text style={[styles.telemetryLabel, { color: theme.textLight, marginBottom: 4 }]}>NEREDEN</Text>
             <Text style={[styles.telemetryCity, { color: theme.text }]} numberOfLines={1}>{item.origin}</Text>
           </View>
-          
+
           <View style={styles.telemetryRoutePath}>
-             <View style={[styles.routePathDash, { borderColor: theme.border }]} />
-             <FontAwesome5 name="truck" size={14} color={config.color} style={{ marginHorizontal: 8 }} />
-             <View style={[styles.routePathDash, { borderColor: theme.border }]} />
+            <View style={[styles.routePathDash, { borderColor: theme.border }]} />
+            <FontAwesome5 name="truck" size={14} color={config.color} style={{ marginHorizontal: 8 }} />
+            <View style={[styles.routePathDash, { borderColor: theme.border }]} />
           </View>
 
           <View style={[styles.bridgePoint, { alignItems: 'flex-end' }]}>
@@ -528,8 +528,8 @@ export default function Dashboard() {
         </View>
 
         <View style={[styles.actionBtn, { backgroundColor: '#F1F5F9' }]}>
-           <Text style={[styles.actionBtnText, { color: theme.accent }]}>İLAN DETAYLARI</Text>
-           <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+          <Text style={[styles.actionBtnText, { color: theme.accent }]}>İLAN DETAYLARI</Text>
+          <Ionicons name="chevron-forward" size={14} color={theme.accent} />
         </View>
       </TouchableOpacity>
     );
@@ -546,44 +546,44 @@ export default function Dashboard() {
             <Text style={styles.greetingHeader}>Hoş Geldin,</Text>
             <Text style={styles.userNameHeader}>{userName || (role === 'SHIPPER' ? 'Yük Veren' : 'Şoför')}</Text>
           </View>
-          <View style={styles.headerRight}>
-            <Image 
-              source={require('../assets/images/512x512 akkoc tahta.png')} 
-              style={styles.headerLogo} 
-              resizeMode="contain" 
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../assets/images/new_logo_horizontal.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
             />
           </View>
         </View>
 
         <View style={styles.statsStrip}>
-           <View style={styles.statItem}>
-              <Text style={styles.statValue}>{todayJobCount}</Text>
-              <Text style={styles.statLabel}>Bugünkü İlanlar</Text>
-           </View>
-           <View style={styles.statDivider} />
-           <View style={styles.statItem}>
-              <Text style={styles.statValue}>{openJobs.length}</Text>
-              <Text style={styles.statLabel}>Toplam İlan</Text>
-           </View>
-           {role === 'DRIVER' && (
-             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-               <TouchableOpacity
-                 style={[styles.searchToggle, { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, width: 'auto' }]}
-                 onPress={() => setAvailModalVisible(true)}
-               >
-                 <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🚛 BOŞ ARAÇ</Text>
-               </TouchableOpacity>
-               <TouchableOpacity style={styles.searchToggle} onPress={() => navigation.navigate('Map')}>
-                  <Ionicons name="map-outline" size={20} color="#fff" />
-               </TouchableOpacity>
-               <TouchableOpacity style={styles.searchToggle} onPress={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
-                  <Ionicons name={viewMode === 'card' ? "list-outline" : "grid-outline"} size={20} color="#fff" />
-               </TouchableOpacity>
-               <TouchableOpacity style={styles.searchToggle} onPress={() => setIsSearchVisible(!isSearchVisible)}>
-                  <Ionicons name={isSearchVisible ? "close" : "search"} size={20} color="#fff" />
-               </TouchableOpacity>
-             </View>
-           )}
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{todayJobCount}</Text>
+            <Text style={styles.statLabel}>Bugünkü İlanlar</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{openJobs.length}</Text>
+            <Text style={styles.statLabel}>Toplam İlan</Text>
+          </View>
+          {role === 'DRIVER' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.searchToggle, { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, width: 'auto' }]}
+                onPress={() => setAvailModalVisible(true)}
+              >
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🚛 BOŞ ARAÇ</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.searchToggle} onPress={() => navigation.navigate('Map')}>
+                <Ionicons name="map-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.searchToggle} onPress={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
+                <Ionicons name={viewMode === 'card' ? "list-outline" : "grid-outline"} size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.searchToggle} onPress={() => setIsSearchVisible(!isSearchVisible)}>
+                <Ionicons name={isSearchVisible ? "close" : "search"} size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </LinearGradient>
 
@@ -600,7 +600,7 @@ export default function Dashboard() {
               </TouchableOpacity>
             )}
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Yük İlanı Oluştur</Text>
-            
+
             <View style={styles.formRow}>
               <View style={styles.inputWrap}>
                 <Text style={[styles.inputLabel, { color: theme.textLight }]}>NEREDEN</Text>
@@ -609,7 +609,7 @@ export default function Dashboard() {
                   onPress={() => { setCityTarget('origin'); setCityModalVisible(true); }}
                 >
                   <Text style={{ color: origin ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
-                     {origin || 'Şehir Seçin'}
+                    {origin || 'Şehir Seçin'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -620,7 +620,7 @@ export default function Dashboard() {
                   onPress={() => { setCityTarget('destination'); setCityModalVisible(true); }}
                 >
                   <Text style={{ color: destination ? theme.text : '#94A3B8', fontSize: 13, fontWeight: '600' }}>
-                     {destination || 'Şehir Seçin'}
+                    {destination || 'Şehir Seçin'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -644,7 +644,7 @@ export default function Dashboard() {
               </View>
               <View style={[styles.formInput, { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9' }, isQuote && { opacity: 0.5 }]}>
                 <Ionicons name="cash-outline" size={18} color={theme.accent} style={{ marginRight: 10 }} />
-                <TextInput 
+                <TextInput
                   style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '600' }}
                   placeholder={isQuote ? "Teklif Usulü Seçili" : "Örn: 15000"}
                   placeholderTextColor="#94A3B8"
@@ -654,18 +654,18 @@ export default function Dashboard() {
                   onChangeText={setPrice}
                 />
               </View>
-              <TouchableOpacity 
-                  onPress={() => { setIsQuote(!isQuote); if(!isQuote) setPrice(''); }}
-                  style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginTop: 10, backgroundColor: isQuote ? theme.accent + '20' : 'rgba(150,150,150,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: isQuote ? theme.accent : 'rgba(150,150,150,0.1)' }}
+              <TouchableOpacity
+                onPress={() => { setIsQuote(!isQuote); if (!isQuote) setPrice(''); }}
+                style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginTop: 10, backgroundColor: isQuote ? theme.accent + '20' : 'rgba(150,150,150,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: isQuote ? theme.accent : 'rgba(150,150,150,0.1)' }}
               >
-                  <Ionicons name={isQuote ? "checkmark-circle" : "ellipse-outline"} size={14} color={isQuote ? theme.accent : theme.textLight} />
-                  <Text style={{ fontSize: 11, fontWeight: '800', marginLeft: 6, color: isQuote ? theme.accent : theme.textLight }}>TEKLİF USULÜ</Text>
+                <Ionicons name={isQuote ? "checkmark-circle" : "ellipse-outline"} size={14} color={isQuote ? theme.accent : theme.textLight} />
+                <Text style={{ fontSize: 11, fontWeight: '800', marginLeft: 6, color: isQuote ? theme.accent : theme.textLight }}>TEKLİF USULÜ</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.inputWrapFull}>
               <Text style={[styles.inputLabel, { color: theme.textLight }]}>YÜK DETAYLARI</Text>
-              <TextInput 
+              <TextInput
                 style={[styles.formInputLarge, { color: theme.text, backgroundColor: '#F1F5F9' }]}
                 placeholder="Örn: 20 Ton Demir..."
                 placeholderTextColor="#94A3B8"
@@ -678,33 +678,33 @@ export default function Dashboard() {
             <View style={styles.inputWrapFull}>
               <Text style={[styles.inputLabel, { color: theme.textLight }]}>YÜKLEME TARİHİ</Text>
               <View style={styles.dateSelectorContainer}>
-                <ScrollView 
-                   horizontal 
-                   showsHorizontalScrollIndicator={false} 
-                   contentContainerStyle={styles.dateStrip}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.dateStrip}
                 >
-                   {getNearbyDates().map((d) => (
-                      <TouchableOpacity 
-                         key={d.id} 
-                         style={[
-                            styles.dateCard, 
-                            { backgroundColor: '#F1F5F9' },
-                            pickupDate === d.fullDate && { backgroundColor: theme.accent, borderColor: theme.accent }
-                         ]} 
-                         onPress={() => setPickupDate(d.fullDate)}
-                      >
-                         <Text style={[styles.dateCardDay, { color: theme.textLight }, pickupDate === d.fullDate && { color: 'rgba(255,255,255,0.8)' }]}>{d.dayName}</Text>
-                         <Text style={[styles.dateCardNum, { color: theme.text }, pickupDate === d.fullDate && { color: '#fff' }]}>{d.dayNumber}</Text>
-                         <Text style={[styles.dateCardMonth, { color: theme.textLight }, pickupDate === d.fullDate && { color: 'rgba(255,255,255,0.8)' }]}>{d.monthName}</Text>
-                      </TouchableOpacity>
-                   ))}
-                   <TouchableOpacity 
-                      style={[styles.dateCard, { backgroundColor: '#F1F5F9', justifyContent: 'center' }]} 
-                      onPress={() => setShowDatePicker(true)}
-                   >
-                      <Ionicons name="calendar" size={20} color={theme.textLight} />
-                      <Text style={[styles.dateCardDay, { color: theme.textLight, marginTop: 4 }]}>Diğer</Text>
-                   </TouchableOpacity>
+                  {getNearbyDates().map((d) => (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={[
+                        styles.dateCard,
+                        { backgroundColor: '#F1F5F9' },
+                        pickupDate === d.fullDate && { backgroundColor: theme.accent, borderColor: theme.accent }
+                      ]}
+                      onPress={() => setPickupDate(d.fullDate)}
+                    >
+                      <Text style={[styles.dateCardDay, { color: theme.textLight }, pickupDate === d.fullDate && { color: 'rgba(255,255,255,0.8)' }]}>{d.dayName}</Text>
+                      <Text style={[styles.dateCardNum, { color: theme.text }, pickupDate === d.fullDate && { color: '#fff' }]}>{d.dayNumber}</Text>
+                      <Text style={[styles.dateCardMonth, { color: theme.textLight }, pickupDate === d.fullDate && { color: 'rgba(255,255,255,0.8)' }]}>{d.monthName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={[styles.dateCard, { backgroundColor: '#F1F5F9', justifyContent: 'center' }]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Ionicons name="calendar" size={20} color={theme.textLight} />
+                    <Text style={[styles.dateCardDay, { color: theme.textLight, marginTop: 4 }]}>Diğer</Text>
+                  </TouchableOpacity>
                 </ScrollView>
               </View>
             </View>
@@ -712,16 +712,16 @@ export default function Dashboard() {
             <View style={styles.inputWrapFull}>
               <Text style={[styles.inputLabel, { color: theme.textLight }]}>ARAÇ TİPİ</Text>
               <View style={styles.vehicleTypeSelector}>
-                 {vehicleTypes.map(({ label, icon }) => (
-                   <TouchableOpacity
-                     key={label}
-                     onPress={() => setRequiredVehicleType(label)}
-                     style={[styles.vTypeBtn, requiredVehicleType === label && { backgroundColor: theme.accent }]}
-                   >
-                     <Text style={styles.vTypeBtnIcon}>{icon}</Text>
-                     <Text style={[styles.vTypeBtnText, requiredVehicleType === label && { color: '#fff' }]}>{label}</Text>
-                   </TouchableOpacity>
-                 ))}
+                {vehicleTypes.map(({ label, icon }) => (
+                  <TouchableOpacity
+                    key={label}
+                    onPress={() => setRequiredVehicleType(label)}
+                    style={[styles.vTypeBtn, requiredVehicleType === label && { backgroundColor: theme.accent }]}
+                  >
+                    <Text style={styles.vTypeBtnIcon}>{icon}</Text>
+                    <Text style={[styles.vTypeBtnText, requiredVehicleType === label && { color: '#fff' }]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
@@ -734,62 +734,62 @@ export default function Dashboard() {
         <View style={{ flex: 1 }}>
           {isSearchVisible && (
             <View style={[styles.searchPanel, { backgroundColor: '#fff' }]}>
-               <View style={styles.searchRow}>
-                  <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
-                     <Ionicons name="location-outline" size={18} color={theme.textLight} />
-                     <TextInput
-                       placeholder="Nereden..."
-                       placeholderTextColor={theme.textLight}
-                       style={[styles.searchInput, { color: theme.text }]}
-                       value={searchOrigin}
-                       onChangeText={setSearchOrigin}
-                     />
-                  </View>
-                  <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
-                     <Ionicons name="flag-outline" size={18} color={theme.textLight} />
-                     <TextInput
-                       placeholder="Nereye..."
-                       placeholderTextColor={theme.textLight}
-                       style={[styles.searchInput, { color: theme.text }]}
-                       value={searchDestination}
-                       onChangeText={setSearchDestination}
-                     />
-                  </View>
-               </View>
-               <View style={styles.sortRow}>
-                 {([['newest', '🕐', 'En Yeni'], ['date_near', '📅', 'Yakın Tarih'], ['price_high', '💰', 'Yüksek Fiyat']] as const).map(([mode, icon, label]) => (
-                   <TouchableOpacity
-                     key={mode}
-                     onPress={() => setSortMode(mode)}
-                     style={[styles.sortChip, sortMode === mode && { backgroundColor: theme.primary }]}
-                   >
-                     <Text style={styles.sortChipIcon}>{icon}</Text>
-                     <Text style={[styles.sortChipText, { color: sortMode === mode ? '#fff' : theme.text }]}>{label}</Text>
-                   </TouchableOpacity>
-                 ))}
-               </View>
-               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipScroll} contentContainerStyle={styles.filterChipRow}>
-                 {[{ label: 'Hepsi', icon: '🔍' }, ...vehicleTypes].map(({ label, icon }) => {
-                   const active = filterVehicleType === label;
-                   return (
-                     <TouchableOpacity
-                       key={label}
-                       onPress={() => setFilterVehicleType(label)}
-                       style={[styles.filterChip, active && { backgroundColor: theme.accent }]}
-                     >
-                       <Text style={styles.filterChipIcon}>{icon}</Text>
-                       <Text style={[styles.filterChipText, { color: active ? '#fff' : theme.text }]}>{label}</Text>
-                     </TouchableOpacity>
-                   );
-                 })}
-               </ScrollView>
+              <View style={styles.searchRow}>
+                <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
+                  <Ionicons name="location-outline" size={18} color={theme.textLight} />
+                  <TextInput
+                    placeholder="Nereden..."
+                    placeholderTextColor={theme.textLight}
+                    style={[styles.searchInput, { color: theme.text }]}
+                    value={searchOrigin}
+                    onChangeText={setSearchOrigin}
+                  />
+                </View>
+                <View style={[styles.searchInputWrapper, { backgroundColor: '#F1F5F9' }]}>
+                  <Ionicons name="flag-outline" size={18} color={theme.textLight} />
+                  <TextInput
+                    placeholder="Nereye..."
+                    placeholderTextColor={theme.textLight}
+                    style={[styles.searchInput, { color: theme.text }]}
+                    value={searchDestination}
+                    onChangeText={setSearchDestination}
+                  />
+                </View>
+              </View>
+              <View style={styles.sortRow}>
+                {([['newest', '🕐', 'En Yeni'], ['date_near', '📅', 'Yakın Tarih'], ['price_high', '💰', 'Yüksek Fiyat']] as const).map(([mode, icon, label]) => (
+                  <TouchableOpacity
+                    key={mode}
+                    onPress={() => setSortMode(mode)}
+                    style={[styles.sortChip, sortMode === mode && { backgroundColor: theme.primary }]}
+                  >
+                    <Text style={styles.sortChipIcon}>{icon}</Text>
+                    <Text style={[styles.sortChipText, { color: sortMode === mode ? '#fff' : theme.text }]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipScroll} contentContainerStyle={styles.filterChipRow}>
+                {[{ label: 'Hepsi', icon: '🔍' }, ...vehicleTypes].map(({ label, icon }) => {
+                  const active = filterVehicleType === label;
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      onPress={() => setFilterVehicleType(label)}
+                      style={[styles.filterChip, active && { backgroundColor: theme.accent }]}
+                    >
+                      <Text style={styles.filterChipIcon}>{icon}</Text>
+                      <Text style={[styles.filterChipText, { color: active ? '#fff' : theme.text }]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           )}
 
           {loading ? (
             <View style={styles.loadingContainer}>
-               <ActivityIndicator size="large" color={theme.accent} />
-               <Text style={[styles.loadingText, { color: theme.textLight }]}>İlanlar yükleniyor...</Text>
+              <ActivityIndicator size="large" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textLight }]}>İlanlar yükleniyor...</Text>
             </View>
           ) : (
             <FlatList
@@ -832,47 +832,47 @@ export default function Dashboard() {
       )}
 
       <Modal transparent animationType="fade" visible={showDatePicker} onRequestClose={() => setShowDatePicker(false)}>
-         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center' }}>
-            <View style={{ margin: 20, backgroundColor: theme.surface, borderRadius: 24, padding: 20, ...Shadows.large }}>
-               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                   <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>Tarih Seçin</Text>
-                   <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ padding: 5 }}>
-                      <Ionicons name="close-circle" size={28} color={theme.textLight} />
-                   </TouchableOpacity>
-               </View>
-               <DatePicker
-                 isGregorian={true}
-                 mode="calendar"
-                 minimumDate={new Date().toLocaleDateString('sv-SE').replace(/-/g, '/')}
-                 selected={pickupDate ? pickupDate.replace(/-/g, '/') : ''}
-                 onSelectedChange={onDateChange}
-                 onDateChange={onDateChange}
-                 onMonthYearChange={() => {}}
-                 options={{
-                   backgroundColor: theme.surface,
-                   textHeaderColor: theme.accent,
-                   textDefaultColor: theme.text,
-                   selectedTextColor: '#fff',
-                   mainColor: theme.accent,
-                   textSecondaryColor: theme.textLight,
-                   borderColor: 'rgba(122, 146, 165, 0.1)',
-                 }}
-                 configs={{
-                   dayNames: ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'],
-                   dayNamesShort: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
-                   monthNames: [
-                     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-                     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-                   ],
-                   selectedFormat: 'YYYY/MM/DD',
-                   dateFormat: 'YYYY/MM/DD',
-                   timeFormat: 'HH:mm',
-                   hour: 'Saat',
-                   minute: 'Dakika',
-                 }}
-               />
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center' }}>
+          <View style={{ margin: 20, backgroundColor: theme.surface, borderRadius: 24, padding: 20, ...Shadows.large }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>Tarih Seçin</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ padding: 5 }}>
+                <Ionicons name="close-circle" size={28} color={theme.textLight} />
+              </TouchableOpacity>
             </View>
-         </View>
+            <DatePicker
+              isGregorian={true}
+              mode="calendar"
+              minimumDate={new Date().toLocaleDateString('sv-SE').replace(/-/g, '/')}
+              selected={pickupDate ? pickupDate.replace(/-/g, '/') : ''}
+              onSelectedChange={onDateChange}
+              onDateChange={onDateChange}
+              onMonthYearChange={() => { }}
+              options={{
+                backgroundColor: theme.surface,
+                textHeaderColor: theme.accent,
+                textDefaultColor: theme.text,
+                selectedTextColor: '#fff',
+                mainColor: theme.accent,
+                textSecondaryColor: theme.textLight,
+                borderColor: 'rgba(122, 146, 165, 0.1)',
+              }}
+              configs={{
+                dayNames: ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'],
+                dayNamesShort: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
+                monthNames: [
+                  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+                ],
+                selectedFormat: 'YYYY/MM/DD',
+                dateFormat: 'YYYY/MM/DD',
+                timeFormat: 'HH:mm',
+                hour: 'Saat',
+                minute: 'Dakika',
+              }}
+            />
+          </View>
+        </View>
       </Modal>
 
       {/* Boş Araç İlanı Modalı */}
@@ -938,22 +938,22 @@ export default function Dashboard() {
       <Modal visible={cityModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCityModalVisible(false)}>
         <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: Platform.OS === 'ios' ? 50 : 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-             <TouchableOpacity onPress={() => setCityModalVisible(false)} style={{ padding: 5, marginRight: 15 }}>
-               <Ionicons name="close" size={24} color={theme.text} />
-             </TouchableOpacity>
-             <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Şehir Seçin</Text>
+            <TouchableOpacity onPress={() => setCityModalVisible(false)} style={{ padding: 5, marginRight: 15 }}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Şehir Seçin</Text>
           </View>
           <View style={{ padding: 20 }}>
-             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 15, borderRadius: 12, height: 50 }}>
-               <Ionicons name="search" size={20} color={theme.textLight} />
-               <TextInput 
-                 style={{ flex: 1, marginLeft: 10, color: theme.text, fontWeight: '600' }}
-                 placeholder="Şehir Ara..."
-                 placeholderTextColor={theme.textLight}
-                 value={citySearch}
-                 onChangeText={setCitySearch}
-               />
-             </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 15, borderRadius: 12, height: 50 }}>
+              <Ionicons name="search" size={20} color={theme.textLight} />
+              <TextInput
+                style={{ flex: 1, marginLeft: 10, color: theme.text, fontWeight: '600' }}
+                placeholder="Şehir Ara..."
+                placeholderTextColor={theme.textLight}
+                value={citySearch}
+                onChangeText={setCitySearch}
+              />
+            </View>
           </View>
           {recentCities.length > 0 && !citySearch ? (
             <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
@@ -995,10 +995,12 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   greetingHeader: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' },
   userNameHeader: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  logoWrapper: { alignItems: 'flex-end', justifyContent: 'center' },
   headerLogo: {
-    width: 42,
-    height: 42,
-    opacity: 0.9,
+    width: 150,
+    height: 50,
+    opacity: 1,
+    marginRight: -30,
   },
   statsStrip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: 12, borderRadius: 16 },
   statItem: { flex: 1, alignItems: 'center' },
@@ -1056,7 +1058,7 @@ const styles = StyleSheet.create({
   listPremiumSpec: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   listPremiumSpecText: { fontSize: 11, fontWeight: '800' },
   listPremiumDivider: { width: 1, height: 12, marginHorizontal: 12, opacity: 0.2 },
-  
+
   // Shipper Styles
   shipperContainer: { padding: 20, paddingBottom: 100 },
   shipperCard: { padding: 24, borderRadius: Radius.xl, borderWidth: 1, ...Shadows.large },
