@@ -80,8 +80,12 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
   }
 
   async function signUpWithEmail() {
-    if (!fullName || !phone || phone.length < 15) {
-      Alert.alert('Eksik Bilgi', 'Lütfen ad soyad ve geçerli bir telefon numarası girin.');
+    if (!fullName) {
+      Alert.alert('Eksik Bilgi', 'Lütfen ad soyadınızı girin.');
+      return;
+    }
+    if (phone && phone.length < 15) {
+      Alert.alert('Geçersiz Telefon', 'Telefon numarası girdiyseniz lütfen tam numarayı girin (0 5XX XXX XX XX).');
       return;
     }
 
@@ -93,7 +97,7 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
         emailRedirectTo: 'akkoclojistik://auth/callback',
         data: {
           full_name: fullName,
-          phone: phone, // Formatlı haliyle (boşluklu) kaydet
+          phone: phone || null,
           role: role,
         },
       },
@@ -253,6 +257,7 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
                     <View style={styles.inputLabelRow}>
                       <Ionicons name="call-outline" size={12} color={theme.accent} />
                       <Text style={[styles.inputLabel, { color: theme.textLight }]}>TELEFON NUMARASI</Text>
+                      <Text style={[styles.inputLabel, { color: theme.textLight, opacity: 0.6, marginLeft: 4 }]}>(İSTEĞE BAĞLI)</Text>
                     </View>
                     <TextInput
                       style={[styles.input, { backgroundColor: '#F8FAFC', color: theme.text, borderColor: theme.border }]}
