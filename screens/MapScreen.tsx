@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ActivityIndicator, ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
-import { useTheme } from '../context/ThemeContext';
-import { Shadows, Radius } from '../constants/Theme';
+import { Shadows } from '../constants/Theme';
+
+const HEADER_BG = '#0F172A';
+const ACCENT = '#F35D18';
 
 const REGION_CITIES: Record<string, string[]> = {
-  'Marmara': ['İstanbul', 'Bursa', 'Kocaeli', 'Tekirdağ', 'Edirne', 'Çanakkale', 'Balıkesir'],
-  'Ege': ['İzmir', 'Manisa', 'Aydın', 'Denizli', 'Muğla', 'Uşak'],
-  'Akdeniz': ['Antalya', 'Mersin', 'Adana', 'Hatay', 'Kahramanmaraş', 'Isparta'],
-  'İç Anadolu': ['Ankara', 'Konya', 'Kayseri', 'Eskişehir', 'Nevşehir', 'Kırıkkale', 'Aksaray', 'Karaman'],
-  'Karadeniz': ['Samsun', 'Trabzon', 'Ordu', 'Zonguldak', 'Kastamonu', 'Giresun', 'Rize'],
-  'Doğu Anadolu': ['Erzurum', 'Malatya', 'Elazığ', 'Van', 'Erzincan', 'Muş', 'Bitlis', 'Ardahan'],
-  'Güneydoğu Anadolu': ['Gaziantep', 'Şanlıurfa', 'Diyarbakır', 'Mardin', 'Batman', 'Siirt', 'Adıyaman'],
+  'Marmara':            ['İstanbul', 'Bursa', 'Kocaeli', 'Tekirdağ', 'Edirne', 'Çanakkale', 'Balıkesir'],
+  'Ege':                ['İzmir', 'Manisa', 'Aydın', 'Denizli', 'Muğla', 'Uşak'],
+  'Akdeniz':            ['Antalya', 'Mersin', 'Adana', 'Hatay', 'Kahramanmaraş', 'Isparta'],
+  'İç Anadolu':         ['Ankara', 'Konya', 'Kayseri', 'Eskişehir', 'Nevşehir', 'Kırıkkale', 'Aksaray', 'Karaman'],
+  'Karadeniz':          ['Samsun', 'Trabzon', 'Ordu', 'Zonguldak', 'Kastamonu', 'Giresun', 'Rize'],
+  'Doğu Anadolu':       ['Erzurum', 'Malatya', 'Elazığ', 'Van', 'Erzincan', 'Muş', 'Bitlis', 'Ardahan'],
+  'Güneydoğu Anadolu':  ['Gaziantep', 'Şanlıurfa', 'Diyarbakır', 'Mardin', 'Batman', 'Siirt', 'Adıyaman'],
 };
 
 export default function MapScreen() {
-  const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<any[]>([]);
@@ -53,13 +57,13 @@ export default function MapScreen() {
     : Object.keys(originCounts).sort((a, b) => (originCounts[b]?.length || 0) - (originCounts[a]?.length || 0));
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.primary }]}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>İLAN HARİTASI</Text>
+          <Text style={styles.headerTitle}>İlan Haritası</Text>
           {!loading && (
             <Text style={styles.headerSub}>{jobs.length} aktif ilan · {Object.keys(originCounts).length} şehir</Text>
           )}
@@ -68,19 +72,19 @@ export default function MapScreen() {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.accent} />
-          <Text style={[styles.loadingText, { color: theme.textLight }]}>Harita yükleniyor...</Text>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={ACCENT} />
+          <Text style={styles.loadingText}>Harita yükleniyor...</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Bölge filtresi */}
+          {/* Region filter */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.regionStrip}>
             <TouchableOpacity
-              style={[styles.regionChip, !selectedRegion && { backgroundColor: theme.accent }]}
+              style={[styles.regionChip, !selectedRegion && { backgroundColor: ACCENT }]}
               onPress={() => setSelectedRegion(null)}
             >
-              <Text style={[styles.regionChipText, { color: !selectedRegion ? '#fff' : theme.text }]}>Tümü</Text>
+              <Text style={[styles.regionChipText, { color: !selectedRegion ? '#fff' : '#0F172A' }]}>Tümü</Text>
             </TouchableOpacity>
             {Object.entries(REGION_CITIES).map(([region, cities]) => {
               const count = cities.reduce((s, c) => s + (originCounts[c]?.length || 0), 0);
@@ -89,74 +93,74 @@ export default function MapScreen() {
               return (
                 <TouchableOpacity
                   key={region}
-                  style={[styles.regionChip, active && { backgroundColor: theme.accent }]}
+                  style={[styles.regionChip, active && { backgroundColor: ACCENT }]}
                   onPress={() => setSelectedRegion(active ? null : region)}
                 >
-                  <Text style={[styles.regionChipText, { color: active ? '#fff' : theme.text }]}>{region}</Text>
-                  <View style={[styles.regionCount, { backgroundColor: active ? 'rgba(255,255,255,0.25)' : theme.accent + '20' }]}>
-                    <Text style={[styles.regionCountText, { color: active ? '#fff' : theme.accent }]}>{count}</Text>
+                  <Text style={[styles.regionChipText, { color: active ? '#fff' : '#0F172A' }]}>{region}</Text>
+                  <View style={[styles.regionCount, { backgroundColor: active ? 'rgba(255,255,255,0.25)' : ACCENT + '20' }]}>
+                    <Text style={[styles.regionCountText, { color: active ? '#fff' : ACCENT }]}>{count}</Text>
                   </View>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          {/* Özet istatistik */}
+          {/* Stats */}
           {!selectedRegion && (
-            <View style={[styles.statsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.statsCard}>
               <View style={styles.statRow}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: theme.accent }]}>{jobs.length}</Text>
-                  <Text style={[styles.statLabel, { color: theme.textLight }]}>Toplam İlan</Text>
+                  <Text style={styles.statValue}>{jobs.length}</Text>
+                  <Text style={styles.statLabel}>Toplam İlan</Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+                <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: theme.accent }]}>{Object.keys(originCounts).length}</Text>
-                  <Text style={[styles.statLabel, { color: theme.textLight }]}>Aktif Şehir</Text>
+                  <Text style={styles.statValue}>{Object.keys(originCounts).length}</Text>
+                  <Text style={styles.statLabel}>Aktif Şehir</Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+                <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: theme.accent }]}>
+                  <Text style={styles.statValue}>
                     {Math.max(0, ...Object.values(originCounts).map(v => v.length))}
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.textLight }]}>En Yoğun</Text>
+                  <Text style={styles.statLabel}>En Yoğun</Text>
                 </View>
               </View>
             </View>
           )}
 
-          {/* Şehir kartları */}
+          {/* City cards */}
           <View style={styles.cityGrid}>
             {displayCities.map(city => {
               const cityJobs = originCounts[city] || [];
               if (cityJobs.length === 0) return null;
               const maxCount = Math.max(1, ...Object.values(originCounts).map(v => v.length));
               const intensity = cityJobs.length / maxCount;
-              const bgOpacity = Math.round(intensity * 40 + 10);
+
               return (
-                <View key={city} style={[styles.cityCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View key={city} style={styles.cityCard}>
                   <View style={styles.cityCardTop}>
-                    <View style={[styles.pinContainer, { backgroundColor: theme.accent + bgOpacity.toString(16).padStart(2, '0') }]}>
-                      <Ionicons name="location" size={20} color={theme.accent} />
-                      <Text style={[styles.pinCount, { color: theme.accent }]}>{cityJobs.length}</Text>
+                    <View style={[styles.pinBox, { backgroundColor: ACCENT + Math.round(intensity * 40 + 10).toString(16).padStart(2, '0') }]}>
+                      <Ionicons name="location" size={18} color={ACCENT} />
+                      <Text style={styles.pinCount}>{cityJobs.length}</Text>
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={[styles.cityName, { color: theme.text }]}>{city}</Text>
-                      <Text style={[styles.cityJobCount, { color: theme.textLight }]}>{cityJobs.length} ilan</Text>
+                      <Text style={styles.cityName}>{city}</Text>
+                      <Text style={styles.cityJobCount}>{cityJobs.length} ilan</Text>
                     </View>
                   </View>
-                  <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-                    <View style={[styles.progressFill, { width: `${intensity * 100}%` as any, backgroundColor: theme.accent }]} />
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${intensity * 100}%` as any }]} />
                   </View>
-                  <View style={styles.destinationList}>
+                  <View style={styles.destList}>
                     {[...new Set(cityJobs.slice(0, 3).map((j: any) => j.destination))].map((dest: any, i: number) => (
-                      <View key={i} style={[styles.destChip, { backgroundColor: theme.accent + '12' }]}>
-                        <Text style={[styles.destChipText, { color: theme.accent }]}>→ {dest}</Text>
+                      <View key={i} style={styles.destChip}>
+                        <Text style={styles.destChipText}>→ {dest}</Text>
                       </View>
                     ))}
                     {cityJobs.length > 3 && (
-                      <View style={[styles.destChip, { backgroundColor: theme.border }]}>
-                        <Text style={[styles.destChipText, { color: theme.textLight }]}>+{cityJobs.length - 3}</Text>
+                      <View style={[styles.destChip, { backgroundColor: '#F1F5F9' }]}>
+                        <Text style={[styles.destChipText, { color: '#64748B' }]}>+{cityJobs.length - 3}</Text>
                       </View>
                     )}
                   </View>
@@ -167,8 +171,8 @@ export default function MapScreen() {
 
           {displayCities.length === 0 && (
             <View style={styles.emptyWrap}>
-              <Ionicons name="map-outline" size={48} color={theme.textLight} style={{ opacity: 0.4, marginBottom: 12 }} />
-              <Text style={[styles.emptyText, { color: theme.textLight }]}>Bu bölgede aktif ilan bulunmuyor.</Text>
+              <Ionicons name="map-outline" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+              <Text style={styles.emptyText}>Bu bölgede aktif ilan bulunmuyor.</Text>
             </View>
           )}
 
@@ -180,35 +184,42 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 1 },
-  headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600', marginTop: 2 },
-  loadingText: { marginTop: 12, fontSize: 13, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14, backgroundColor: HEADER_BG },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  headerSub: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '600', marginTop: 2 },
+
+  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+
   regionStrip: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 14 },
-  regionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.06)' },
+  regionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#E2E8F0' },
   regionChipText: { fontSize: 12, fontWeight: '800' },
   regionCount: { minWidth: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
   regionCountText: { fontSize: 10, fontWeight: '900' },
-  statsCard: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16, ...Shadows.sm },
+
+  statsCard: { marginHorizontal: 16, borderRadius: 16, padding: 16, marginBottom: 16, backgroundColor: '#fff', ...Shadows.medium },
   statRow: { flexDirection: 'row', alignItems: 'center' },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 22, fontWeight: '900' },
-  statLabel: { fontSize: 10, fontWeight: '700', marginTop: 2 },
-  statDivider: { width: 1, height: 30 },
+  statValue: { fontSize: 22, fontWeight: '900', color: ACCENT },
+  statLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', marginTop: 2 },
+  statDivider: { width: 1, height: 30, backgroundColor: '#E2E8F0' },
+
   cityGrid: { paddingHorizontal: 16, gap: 12 },
-  cityCard: { borderRadius: Radius.xl, padding: 16, borderWidth: 1, ...Shadows.sm },
+  cityCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, ...Shadows.medium },
   cityCardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  pinContainer: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  pinCount: { fontSize: 10, fontWeight: '900', position: 'absolute', top: 3, right: 3 },
-  cityName: { fontSize: 16, fontWeight: '900' },
-  cityJobCount: { fontSize: 11, fontWeight: '600', marginTop: 2 },
-  progressBar: { height: 4, borderRadius: 2, marginBottom: 10, overflow: 'hidden' },
-  progressFill: { height: 4, borderRadius: 2 },
-  destinationList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  destChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12 },
-  destChipText: { fontSize: 11, fontWeight: '700' },
+  pinBox: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  pinCount: { fontSize: 9, fontWeight: '900', color: ACCENT, position: 'absolute', top: 3, right: 3 },
+  cityName: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
+  cityJobCount: { fontSize: 11, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
+  progressBar: { height: 4, borderRadius: 2, marginBottom: 10, overflow: 'hidden', backgroundColor: '#E2E8F0' },
+  progressFill: { height: 4, borderRadius: 2, backgroundColor: ACCENT },
+  destList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  destChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: ACCENT + '12' },
+  destChipText: { fontSize: 11, fontWeight: '700', color: ACCENT },
+
   emptyWrap: { alignItems: 'center', marginTop: 80 },
-  emptyText: { fontSize: 13, fontWeight: '600' },
+  emptyText: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
 });

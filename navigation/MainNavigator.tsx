@@ -20,6 +20,8 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import SupportScreen from '../screens/SupportScreen';
 import LegalScreen from '../screens/LegalScreen';
 import LegalDetailScreen from '../screens/LegalDetailScreen';
+import JobPostingScreen from '../screens/JobPostingScreen';
+import AvailabilityPostingScreen from '../screens/AvailabilityPostingScreen';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 
@@ -43,16 +45,10 @@ function HomeStack() {
         component={Dashboard} 
         options={{ headerShown: false }} 
       />
-      <Stack.Screen
-        name="JobDetail"
-        component={JobDetailScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Map"
-        component={MapScreen}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Map" component={MapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="JobPosting" component={JobPostingScreen} options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="AvailabilityPosting" component={AvailabilityPostingScreen} options={{ headerShown: false, animation: 'slide_from_bottom' }} />
     </Stack.Navigator>
   );
 }
@@ -230,23 +226,23 @@ export default function MainNavigator() {
         },
       })}
     >
-      <Tab.Screen 
-        name="HomeTab" 
-        component={HomeStack} 
-        options={{ title: 'Ana Ekran' }} 
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeStack}
+        options={{ title: 'Ana Sayfa' }}
       />
       {role === 'DRIVER' && (
-          <Tab.Screen 
-            name="MyApplications" 
-            component={DriverAppStack} 
-            options={{ title: 'Başvurularım' }} 
+          <Tab.Screen
+            name="MyApplications"
+            component={DriverAppStack}
+            options={{ title: 'Başvurularım' }}
           />
       )}
       {role === 'SHIPPER' && (
-          <Tab.Screen 
-            name="ShipperJobs" 
-            component={ShipperStack} 
-            options={{ title: 'İlanlarım' }} 
+          <Tab.Screen
+            name="ShipperJobs"
+            component={ShipperStack}
+            options={{ title: 'Yüklerim' }}
           />
       )}
       <Tab.Screen

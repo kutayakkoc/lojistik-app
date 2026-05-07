@@ -1,37 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Spacing, Shadows, Radius } from '../constants/Theme';
-import { useTheme } from '../context/ThemeContext';
+import { Shadows } from '../constants/Theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+
+const HEADER_BG = '#0F172A';
+const ACCENT = '#F35D18';
 
 const VEHICLE_TYPES: { label: string; icon: string }[] = [
-  { label: 'TIR', icon: '🚛' },
-  { label: 'Kamyon', icon: '🚚' },
-  { label: 'Kamyonet', icon: '🚐' },
-  { label: 'Frigo', icon: '❄️' },
-  { label: 'Tenteli', icon: '🏕️' },
-  { label: 'Açık Kasa', icon: '📦' },
-  { label: 'Lowbed', icon: '🔧' },
+  { label: 'TIR',        icon: '🚛' },
+  { label: 'Kamyon',     icon: '🚚' },
+  { label: 'Kamyonet',   icon: '🚐' },
+  { label: 'Frigo',      icon: '❄️' },
+  { label: 'Tenteli',    icon: '🏕️' },
+  { label: 'Açık Kasa',  icon: '📦' },
+  { label: 'Lowbed',     icon: '🔧' },
 ];
 
 export default function EditVehicleScreen() {
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [plateNumber, setPlateNumber] = useState('');
@@ -45,7 +40,6 @@ export default function EditVehicleScreen() {
     try {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session?.user) return;
 
       const { data, error } = await supabase
@@ -68,27 +62,22 @@ export default function EditVehicleScreen() {
   };
 
   const formatPlate = (text: string) => {
-    // Sadece alfanümerik karakterler, boşlukları temizle ve büyük harfe çevir
     let cleaned = text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    
-    // Basit bir Türk plakası formatı denemesi (34ABC123 -> 34 ABC 123)
     if (cleaned.length <= 2) return cleaned;
     if (cleaned.length <= 5) return cleaned.slice(0, 2) + ' ' + cleaned.slice(2);
     return cleaned.slice(0, 2) + ' ' + cleaned.slice(2, 5) + ' ' + cleaned.slice(5, 9);
   };
 
   const validatePlate = (plate: string) => {
-    // Türk plakası regex: 2 rakam, 1-3 harf, 2-4 rakam
     const regex = /^[0-9]{2}\s[A-Z]{1,3}\s[0-9]{2,4}$/;
     return regex.test(plate);
   };
 
-  const handleSaveVehicle = async () => {
+  const handleSave = async () => {
     if (!plateNumber) {
       Alert.alert('Hata', 'Lütfen plaka numarasını giriniz.');
       return;
     }
-
     if (!validatePlate(plateNumber)) {
       Alert.alert('Hata', 'Lütfen geçerli bir Türk plakası giriniz (Örn: 34 ABC 123).');
       return;
@@ -99,20 +88,17 @@ export default function EditVehicleScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const vehicleData = {
-        owner_id: session.user.id,
-        plate_number: plateNumber.replace(/\s/g, ''), // Veritabanına boşluksuz kaydedelim
-        vehicle_type: vehicleType,
-      };
-
       const { error } = await supabase
         .from('vehicles')
-        .upsert(vehicleData, { onConflict: 'owner_id' });
+        .upsert(
+          { owner_id: session.user.id, plate_number: plateNumber.replace(/\s/g, ''), vehicle_type: vehicleType },
+          { onConflict: 'owner_id' },
+        );
 
       if (error) throw error;
 
       Alert.alert('Başarılı', 'Araç bilgileriniz kaydedildi.', [
-        { text: 'Tamam', onPress: () => navigation.goBack() }
+        { text: 'Tamam', onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
       Alert.alert('Hata', error.message);
@@ -123,208 +109,117 @@ export default function EditVehicleScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={ACCENT} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
-      {/* Header Space */}
-      <View style={{ height: insets.top + 12 }} />
-      
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: '#f1f2f6' }]} 
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Araç Bilgilerini Düzenle</Text>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Araç Bilgilerini Düzenle</Text>
+        </View>
       </View>
 
-      <View style={styles.content}>
-        <View style={[styles.section, { backgroundColor: theme.surface }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={20} color={theme.accent} />
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Araç Detayları</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="car-outline" size={18} color={ACCENT} />
+            <Text style={styles.cardTitle}>Araç Detayları</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: theme.textLight }]}>Plaka Numarası</Text>
+            <Text style={styles.inputLabel}>PLAKA NUMARASI</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: '#f7f8fa', color: theme.text, borderColor: theme.border }]}
+              style={styles.input}
               value={plateNumber}
               onChangeText={(text) => setPlateNumber(formatPlate(text))}
               placeholder="34 ABC 123"
-              placeholderTextColor={theme.textLight}
+              placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
               maxLength={11}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: theme.textLight }]}>Araç Tipi</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={styles.inputLabel}>ARAÇ TİPİ</Text>
+            <View style={styles.picker}>
               {VEHICLE_TYPES.map(({ label, icon }) => (
                 <TouchableOpacity
                   key={label}
-                  style={[
-                    styles.pickerItem,
-                    { borderColor: theme.border },
-                    vehicleType === label && { backgroundColor: theme.primary, borderColor: theme.primary }
-                  ]}
+                  style={[styles.pickerItem, vehicleType === label && styles.pickerItemActive]}
                   onPress={() => setVehicleType(label)}
                 >
-                  <Text style={styles.pickerItemIcon}>{icon}</Text>
-                  <Text style={[
-                    styles.pickerItemText,
-                    { color: theme.text },
-                    vehicleType === label && { color: '#fff' }
-                  ]}>
-                    {label}
-                  </Text>
+                  <Text style={styles.pickerIcon}>{icon}</Text>
+                  <Text style={[styles.pickerLabel, vehicleType === label && { color: '#fff' }]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={handleSaveVehicle}
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+            onPress={handleSave}
             disabled={saving}
           >
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-                <LinearGradient
-                  colors={[theme.accent, '#FB923C']}
-                style={styles.saveButtonGradient}
-              >
-                <Ionicons name="save-outline" size={20} color="#fff" />
-                <Text style={styles.saveButtonText}>Araç Bilgilerini Kaydet</Text>
-              </LinearGradient>
+              <>
+                <Ionicons name="save-outline" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Araç Bilgilerini Kaydet</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
-        
-        <Text style={[styles.infoText, { color: theme.textLight }]}>
+
+        <Text style={styles.infoText}>
           Araç bilgilerinizi doğru girmeniz, profilinizin yük verenler tarafından daha güvenilir bulunmasını sağlar.
         </Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  content: {
-    padding: Spacing.md,
-  },
-  section: {
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    ...Shadows.medium,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginLeft: Spacing.sm,
-  },
-  inputGroup: {
-    marginBottom: Spacing.md,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: Spacing.xs,
-    marginLeft: 2,
-    textTransform: 'uppercase',
-  },
-  input: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: 14,
-    borderWidth: 1,
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  pickerItem: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  pickerItemIcon: {
-    fontSize: 16,
-  },
-  pickerItemText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  saveButton: {
-    borderRadius: Radius.md,
-    overflow: 'hidden',
-    marginTop: Spacing.md,
-    ...Shadows.medium,
-  },
-  saveButtonGradient: {
-    flexDirection: 'row',
-    padding: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-    marginLeft: Spacing.sm,
-  },
-  infoText: {
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-  },
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
+
+  header: { backgroundColor: HEADER_BG, paddingHorizontal: 20, paddingBottom: 20 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+
+  scroll: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, ...Shadows.medium },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+
+  inputGroup: { marginBottom: 20 },
+  inputLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', marginBottom: 8, marginLeft: 2 },
+  input: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, fontSize: 14, color: '#0F172A' },
+
+  picker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  pickerItemActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  pickerIcon: { fontSize: 15 },
+  pickerLabel: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+
+  saveBtn: { backgroundColor: ACCENT, borderRadius: 12, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, ...Shadows.medium },
+  saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+
+  infoText: { textAlign: 'center', fontSize: 12, color: '#94A3B8', lineHeight: 18, marginTop: 20, paddingHorizontal: 20 },
 });

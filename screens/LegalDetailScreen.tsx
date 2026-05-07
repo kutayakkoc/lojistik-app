@@ -1,16 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Spacing, Radius, Shadows } from '../constants/Theme';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Shadows } from '../constants/Theme';
 import { StatusBar } from 'expo-status-bar';
 
 export const getLegalText = (docId: string) => {
-    switch (docId) {
-      case 'terms':
-        return `KULLANICI SÖZLEŞMESİ VE HİZMET ŞARTLARI
+  switch (docId) {
+    case 'terms':
+      return `KULLANICI SÖZLEŞMESİ VE HİZMET ŞARTLARI
 
 1. TARAFLAR
 Bu Kullanıcı Sözleşmesi ("Sözleşme"), "Akkoç Lojistik" mobil uygulamasını ("Uygulama") kullanan yük veren, nakliyeci veya şoför ("Kullanıcı") ile Uygulama'nın sahibi Akkoç Bilişim ve Lojistik Teknolojileri ("Şirket") arasında, Kullanıcı'nın Uygulama'ya kayıt olması veya Uygulama'yı kullanmaya başlaması ile elektronik ortamda akdedilmiştir.
@@ -33,9 +31,9 @@ Kullanıcı dilediği zaman Uygulama'yı silerek ve hesabının kapatılmasını
 
 6. UYUŞMAZLIKLARIN ÇÖZÜMÜ
 Bu Sözleşme'nin uygulanmasından doğabilecek uyuşmazlıklarda Türkiye Cumhuriyeti yasaları uygulanacak olup, İstanbul Merkez Mahkemeleri ve İcra Daireleri yetkilidir.`;
-      
-      case 'privacy':
-        return `GİZLİLİK POLİTİKASI
+
+    case 'privacy':
+      return `GİZLİLİK POLİTİKASI
 
 Akkoç Lojistik ("Şirket") olarak, kullanıcılarımızın ("Kullanıcı") kişisel verilerinin korunmasına ve gizliliğine büyük önem veriyoruz. Bu politika, Uygulama üzerinden hangi verilerin toplandığını ve bu verilerin nasıl kullanıldığını açıklamaktadır.
 
@@ -65,8 +63,8 @@ Verileriniz, modern şifreleme algoritmalarıyla korunmakta ve yüksek güvenlik
 5. DEĞİŞİKLİKLER
 Şirket, yasal mevzuatlardaki değişiklikler veya yeni özelliklerin eklenmesi sebebiyle bu Gizlilik Politikası'nda değişiklik yapma hakkını saklı tutar.`;
 
-      case 'kvkk':
-        return `KİŞİSEL VERİLERİN İŞLENMESİNE İLİŞKİN AYDINLATMA METNİ
+    case 'kvkk':
+      return `KİŞİSEL VERİLERİN İŞLENMESİNE İLİŞKİN AYDINLATMA METNİ
 
 Akkoç Lojistik (bundan böyle "Veri Sorumlusu" olarak anılacaktır) olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca kişisel verilerinizi hangi amaçlarla işlediğimiz ve haklarınız konusunda sizi bilgilendirmek isteriz.
 
@@ -99,59 +97,36 @@ f) KVKK ve ilgili kanun hükümlerine uygun olarak işlenmiş olmasına rağmen,
 g) (e) ve (f) bentleri uyarınca yapılan işlemlerin, kişisel verilerin aktarıldığı üçüncü kişilere bildirilmesini isteme haklarına sahipsiniz.
 
 Taleplerinizi sistem içindeki "Destek" bölümünden veya info@akkoclojistik.com.tr adresine yazılı olarak iletebilirsiniz.`;
-      
-      default:
-        return 'Sistem ilgili operasyonel metni yüklerken bir sorun yaşadı.';
-    }
-  };
+
+    default:
+      return 'İlgili yasal metin yüklenirken bir sorun oluştu.';
+  }
+};
+
+const HEADER_BG = '#0F172A';
 
 export default function LegalDetailScreen({ route, navigation }: any) {
   const { docId, title } = route.params;
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Immersive Mission Control Header */}
-      <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
-        <LinearGradient
-          colors={[theme.primary, '#f35d18']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]} 
-            onPress={() => navigation.goBack()}
-          >
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <View style={styles.titleContainer}>
-             <Text style={styles.headerTitle} numberOfLines={2}>{title?.toUpperCase()}</Text>
-          </View>
+          <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40, paddingTop: 20 }}
-        showsVerticalScrollIndicator={true}
-      >
-        <View style={styles.content}>
-          <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-             <View style={styles.specHeader}>
-                <Ionicons name="information-circle-outline" size={16} color={theme.textLight} />
-                <Text style={[styles.specTitle, { color: theme.textLight }]}>METİN BİLGİSİ</Text>
-             </View>
-             
-             <Text style={[styles.legalBody, { color: theme.text }]}>
-                {getLegalText(docId)}
-             </Text>
-
-             <View style={[styles.telemetryDivider, { backgroundColor: theme.border }]} />
-             <Text style={[styles.updateDate, { color: theme.success }]}>SON GÜNCELLEME: 04 MAYIS 2026</Text>
-          </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
+        <View style={styles.card}>
+          <Text style={styles.legalBody}>{getLegalText(docId)}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.updateDate}>Son Güncelleme: 04 Mayıs 2026</Text>
         </View>
       </ScrollView>
     </View>
@@ -159,19 +134,17 @@ export default function LegalDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerHero: { paddingHorizontal: 20, paddingBottom: 25, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, ...Shadows.medium },
-  headerContent: { flexDirection: 'row', alignItems: 'center' },
-  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  titleContainer: { flex: 1 },
-  headerSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
-  scrollView: { flex: 1, marginTop: -15 },
-  content: { padding: 20 },
-  specCard: { padding: 20, borderRadius: Radius.xl, marginBottom: 20, borderWidth: 1, ...Shadows.medium },
-  specHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)', paddingBottom: 15 },
-  specTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
-  legalBody: { fontSize: 14, lineHeight: 24, textAlign: 'left', fontWeight: '500' },
-  telemetryDivider: { height: 1, width: '100%', marginVertical: 20, opacity: 0.5 },
-  updateDate: { fontSize: 9, fontWeight: '900', letterSpacing: 1, textAlign: 'right' }
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+
+  header: { backgroundColor: HEADER_BG, paddingHorizontal: 20, paddingBottom: 20 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '800', flex: 1 },
+
+  scrollContent: { padding: 20, paddingBottom: 40 },
+
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, ...Shadows.medium },
+  legalBody: { fontSize: 14, lineHeight: 24, color: '#0F172A', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 20 },
+  updateDate: { fontSize: 11, color: '#16A34A', fontWeight: '700', textAlign: 'right' },
 });

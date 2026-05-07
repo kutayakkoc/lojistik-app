@@ -1,173 +1,142 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Spacing, Radius, Shadows } from '../constants/Theme';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Shadows } from '../constants/Theme';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
 
+const HEADER_BG = '#0F172A';
+const ACCENT = '#F35D18';
+
 const LEGAL_DOCS = [
-  { id: 'terms', title: 'Sistem Kullanım Koşulları', icon: 'document-text-outline' },
-  { id: 'privacy', title: 'Veri Gizlilik Politikası', icon: 'shield-checkmark-outline' },
-  { id: 'kvkk', title: 'KVKK ve Veri İşleme Metni', icon: 'finger-print-outline' },
-];
+  { id: 'terms',   title: 'Sistem Kullanım Koşulları',  icon: 'document-text-outline' },
+  { id: 'privacy', title: 'Veri Gizlilik Politikası',   icon: 'shield-checkmark-outline' },
+  { id: 'kvkk',   title: 'KVKK ve Veri İşleme Metni', icon: 'finger-print-outline' },
+] as const;
 
 export default function LegalScreen({ navigation }: any) {
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      "Hesabı Kalıcı Olarak Sil",
-      "Tüm verileriniz (ilanlar, başvurular, araç bilgileri) kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+      'Hesabı Kalıcı Olarak Sil',
+      'Tüm verileriniz (ilanlar, başvurular, araç bilgileri) kalıcı olarak silinecek. Bu işlem geri alınamaz.',
       [
-        { text: "Vazgeç", style: "cancel" },
+        { text: 'Vazgeç', style: 'cancel' },
         {
-          text: "Devam Et",
-          style: "destructive",
+          text: 'Devam Et',
+          style: 'destructive',
           onPress: () => {
             Alert.alert(
-              "Son Onay",
-              "Hesabınızı silmek istediğinizden kesinlikle emin misiniz?",
+              'Son Onay',
+              'Hesabınızı silmek istediğinizden kesinlikle emin misiniz?',
               [
-                { text: "İptal", style: "cancel" },
+                { text: 'İptal', style: 'cancel' },
                 {
-                  text: "Evet, Hesabımı Sil",
-                  style: "destructive",
+                  text: 'Evet, Hesabımı Sil',
+                  style: 'destructive',
                   onPress: async () => {
                     try {
                       const { error } = await supabase.rpc('delete_user');
                       if (error) throw error;
                       Alert.alert(
-                        "Hesabınız Silindi",
-                        "Tüm verileriniz kalıcı olarak silindi. Çıkış yapılıyor...",
-                        [{ text: "Tamam", onPress: async () => { await supabase.auth.signOut(); } }]
+                        'Hesabınız Silindi',
+                        'Tüm verileriniz kalıcı olarak silindi. Çıkış yapılıyor...',
+                        [{ text: 'Tamam', onPress: async () => { await supabase.auth.signOut(); } }],
                       );
-                    } catch (error: any) {
-                      Alert.alert("Hata", "İşlem sırasında bir sorun oluştu. Lütfen tekrar deneyin.");
+                    } catch {
+                      Alert.alert('Hata', 'İşlem sırasında bir sorun oluştu. Lütfen tekrar deneyin.');
                     }
                   },
                 },
-              ]
+              ],
             );
           },
         },
-      ]
+      ],
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Immersive Mission Control Header */}
-      <View style={[styles.headerHero, { paddingTop: insets.top + 10 }]}>
-        <LinearGradient
-          colors={[theme.primary, '#f35d18']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
-            onPress={() => navigation.goBack()}
-          >
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <View style={styles.titleContainer}>
-            <Text style={styles.headerTitle}>GÜVENLİK VE YASAL</Text>
-          </View>
+          <Text style={styles.headerTitle}>Güvenlik ve Yasal</Text>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40, paddingTop: 20 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.specHeader}>
-              <Ionicons name="library-outline" size={16} color={theme.accent} />
-              <Text style={[styles.specTitle, { color: theme.text }]}>RESMİ SÖZLEŞMELER</Text>
-            </View>
-
-            <View style={styles.docList}>
-              {LEGAL_DOCS.map((doc, index) => (
-                <TouchableOpacity
-                  key={doc.id}
-                  style={[
-                    styles.docItem,
-                    index === LEGAL_DOCS.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 }
-                  ]}
-                  onPress={() => navigation.navigate('LegalDetail', { docId: doc.id, title: doc.title })}
-                >
-                  <View style={styles.docItemLeft}>
-                    <View style={[styles.iconBox, { backgroundColor: 'rgba(0,0,0,0.03)' }]}>
-                      <Ionicons name={doc.icon as any} size={18} color={theme.accent} />
-                    </View>
-                    <Text style={[styles.docTitle, { color: theme.text }]}>{doc.title}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textLight} />
-                </TouchableOpacity>
-              ))}
-            </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="library-outline" size={18} color={ACCENT} />
+            <Text style={styles.cardTitle}>Resmi Sözleşmeler</Text>
           </View>
-
-          <View style={[styles.specCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <View style={styles.specHeader}>
-              <Ionicons name="settings-outline" size={16} color={theme.accent} />
-              <Text style={[styles.specTitle, { color: theme.text }]}>HESAP YÖNETİMİ</Text>
-            </View>
-
+          {LEGAL_DOCS.map((doc, index) => (
             <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={handleDeleteAccount}
+              key={doc.id}
+              style={[styles.menuRow, index === LEGAL_DOCS.length - 1 && { borderBottomWidth: 0 }]}
+              onPress={() => navigation.navigate('LegalDetail', { docId: doc.id, title: doc.title })}
             >
-              <View style={styles.docItemLeft}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.05)' }]}>
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              <View style={styles.menuRowLeft}>
+                <View style={styles.menuIconBox}>
+                  <Ionicons name={doc.icon as any} size={18} color={ACCENT} />
                 </View>
-                <View>
-                  <Text style={[styles.docTitle, { color: "#EF4444" }]}>Hesabımı Kalıcı Olarak Sil</Text>
-                  <Text style={{ fontSize: 10, color: theme.textLight, marginTop: 2 }}>Verileriniz ve profiliniz tamamen kaldırılır.</Text>
-                </View>
+                <Text style={styles.menuLabel}>{doc.title}</Text>
               </View>
+              <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.infoFooter}>
-            <Ionicons name="shield-checkmark" size={24} color={theme.accent} style={{ opacity: 0.5, marginBottom: 10 }} />
-            <Text style={[styles.footerDesc, { color: theme.textLight }]}>Akkoç Lojistik Sistemleri Veri İşleme Protokolü V1.0.4</Text>
-            <Text style={[styles.footerCopyright, { color: theme.textLight }]}>© 2026 Akkoç Bilişim ve Lojistik Teknolojileri</Text>
-          </View>
+          ))}
         </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="settings-outline" size={18} color={ACCENT} />
+            <Text style={styles.cardTitle}>Hesap Yönetimi</Text>
+          </View>
+          <TouchableOpacity style={[styles.menuRow, { borderBottomWidth: 0 }]} onPress={handleDeleteAccount}>
+            <View style={styles.menuRowLeft}>
+              <View style={[styles.menuIconBox, { backgroundColor: '#FEF2F2' }]}>
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </View>
+              <View>
+                <Text style={[styles.menuLabel, { color: '#EF4444' }]}>Hesabımı Kalıcı Olarak Sil</Text>
+                <Text style={styles.menuSub}>Verileriniz ve profiliniz tamamen kaldırılır.</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.footer}>© 2026 Akkoç Bilişim ve Lojistik Teknolojileri</Text>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerHero: { paddingHorizontal: 20, paddingBottom: 25, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, ...Shadows.medium },
-  headerContent: { flexDirection: 'row', alignItems: 'center' },
-  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  titleContainer: { flex: 1 },
-  headerSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
-  scrollView: { flex: 1, marginTop: -15 },
-  content: { padding: 20 },
-  specCard: { padding: 20, borderRadius: Radius.xl, marginBottom: 20, borderWidth: 1, ...Shadows.medium },
-  specHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)', paddingBottom: 15 },
-  specTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
-  docList: { gap: 0 },
-  docItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)' },
-  docItemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  iconBox: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  docTitle: { fontSize: 14, fontWeight: '600' },
-  infoFooter: { alignItems: 'center', marginTop: 20 },
-  footerDesc: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, opacity: 0.6, marginBottom: 4 },
-  footerCopyright: { fontSize: 9, fontWeight: '500', opacity: 0.5 },
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 5 },
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+
+  header: { backgroundColor: HEADER_BG, paddingHorizontal: 20, paddingBottom: 20 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+
+  scrollContent: { padding: 20, paddingBottom: 40 },
+
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, ...Shadows.medium },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+
+  menuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  menuRowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
+  menuIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFF7F4', justifyContent: 'center', alignItems: 'center' },
+  menuLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  menuSub: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+
+  footer: { textAlign: 'center', fontSize: 11, color: '#CBD5E1', marginTop: 8 },
 });

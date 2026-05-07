@@ -35,10 +35,10 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
   const formatPhoneNumber = (text: string) => {
     let digits = text.replace(/\D/g, '');
     if (digits.length === 0) return '';
-    
+
     // Her zaman 0 ile başlamasını sağla
     if (digits.charAt(0) !== '0') digits = '0' + digits;
-    
+
     let formatted = '0';
     if (digits.length > 1) {
       formatted += ' ' + digits.substring(1, 4);
@@ -178,14 +178,22 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1E3A8A', '#020617']}
-      style={styles.container}
-    >
-      <View style={[StyleSheet.absoluteFill, { opacity: 0.15, backgroundColor: '#000' }]} />
+    <View style={[styles.container, { backgroundColor: '#F1F5F9' }]}>
+      <LinearGradient
+        colors={['#1E3A8A', '#020617']}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          height: height * 0.35, 
+          borderBottomLeftRadius: 40, 
+          borderBottomRightRadius: 40 
+        }} 
+      />
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
@@ -370,7 +378,7 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
           </View>
 
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: '#fff', opacity: 0.5 }]}>
+            <Text style={[styles.footerText, { color: '#64748B', opacity: 0.8 }]}>
               AKKOÇ LOJİSTİK KURUMSAL PORTAL v1.0.1
             </Text>
           </View>
@@ -385,22 +393,22 @@ export default function Auth({ recoveryState }: { recoveryState: any }) {
       >
         <View style={{ flex: 1, backgroundColor: theme.background }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 30, borderBottomWidth: 1, borderColor: theme.border }}>
-             <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text }}>
-               {legalDoc === 'terms' ? 'Kullanıcı Sözleşmesi' : legalDoc === 'privacy' ? 'Gizlilik Politikası' : 'KVKK Aydınlatma Metni'}
-             </Text>
-             <TouchableOpacity onPress={() => setLegalDoc(null)}>
-               <Ionicons name="close" size={26} color={theme.text} />
-             </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text }}>
+              {legalDoc === 'terms' ? 'Kullanıcı Sözleşmesi' : legalDoc === 'privacy' ? 'Gizlilik Politikası' : 'KVKK Aydınlatma Metni'}
+            </Text>
+            <TouchableOpacity onPress={() => setLegalDoc(null)}>
+              <Ionicons name="close" size={26} color={theme.text} />
+            </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }}>
-             <Text style={{ color: theme.text, lineHeight: 22, fontSize: 13 }}>
-               {legalDoc ? getLegalText(legalDoc) : ''}
-             </Text>
+            <Text style={{ color: theme.text, lineHeight: 22, fontSize: 13 }}>
+              {legalDoc ? getLegalText(legalDoc) : ''}
+            </Text>
           </ScrollView>
         </View>
       </Modal>
 
-    </LinearGradient>
+    </View>
   );
 }
 
